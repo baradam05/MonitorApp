@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Select1",
+    "connection": "DefaultSQL",
+    "queryText": "SELECT * FROM logs",
+    "notifications": ["DefaultEmail", "DefaultTeams"]
+  },
+  {
+    "name": "Select2",
+    "connection": "DefaultES",
+    "queryText": "SELECT * FROM events",
+    "notifications": ["DefaultSMS"]
+  }
+]

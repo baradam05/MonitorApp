@@ -1,0 +1,14 @@
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/bin/Debug/net10.0/MonitorApp
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/bin/Debug/net10.0/MonitorApp.deps.json
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/bin/Debug/net10.0/MonitorApp.runtimeconfig.json
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/bin/Debug/net10.0/MonitorApp.dll
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/bin/Debug/net10.0/MonitorApp.pdb
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.GeneratedMSBuildEditorConfig.editorconfig
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.AssemblyInfoInputs.cache
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.AssemblyInfo.cs
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.csproj.CoreCompileInputs.cache
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.dll
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/refint/MonitorApp.dll
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.pdb
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/MonitorApp.genruntimeconfig.cache
+/home/baradam/Projects/Creasoft/MonitorApp/MonitorApp/obj/Debug/net10.0/ref/MonitorApp.dll
