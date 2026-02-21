@@ -1,6 +1,6 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class InFile : Select
+public class InFile : Query
 {
     public string path { get; set; }
 }

@@ -1,6 +1,6 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class EmailNotification : Notification
+public class EmailNotificationDTO : Notification
 {
     public string SmtpServer { get; set; } = "smtp.gmail.com";
     public string SmtpPort { get; set; } = "587";

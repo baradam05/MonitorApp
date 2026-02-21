@@ -1,6 +1,6 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class SQLConnection : Connection
+public class SQLConnectionDTO : Connection
 {
     public string connectionString { get; set; }
 }

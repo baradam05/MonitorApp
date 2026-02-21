@@ -48,21 +48,21 @@ public static class JsonParser
         Config config = new();
         config.Connections = dto.Connections;
         config.Notifications = dto.Notifications;
-        config.Selects = new();
+        config.Queries = new();
         
-        foreach(Select selectDTO in dto.Selects)
+        foreach(Query selectDTO in dto.Queries)
         {
-            if (selectDTO is DbSelectDTO dbDTO)
+            if (selectDTO is DbQueryDto dbDTO)
             {
-                Select s = DTOToSelect(dbDTO, config);
-                config.Selects.Add(s);
+                Query s = DTOToSelect(dbDTO, config);
+                config.Queries.Add(s);
             }
             else if (selectDTO is InFile inFile)
             {
-                List <DbSelectDTO> selectsFromFile = LoadSelectsFromFile(inFile.path);
-                foreach (DbSelectDTO inFileSelect in selectsFromFile)
+                List <DbQueryDto> selectsFromFile = LoadSelectsFromFile(inFile.path);
+                foreach (DbQueryDto inFileSelect in selectsFromFile)
                 {
-                    config.Selects.Add(DTOToSelect(inFileSelect, config));
+                    config.Queries.Add(DTOToSelect(inFileSelect, config));
                 }
             }
         }
@@ -70,7 +70,7 @@ public static class JsonParser
         return config;
     }
 
-    private static List<DbSelectDTO> LoadSelectsFromFile(string filePath)
+    private static List<DbQueryDto> LoadSelectsFromFile(string filePath)
     {
         filePath = Path.Combine(AppContext.BaseDirectory, filePath);
         if (!File.Exists(filePath))
@@ -80,7 +80,7 @@ public static class JsonParser
         }
         
         string json = File.ReadAllText(filePath);
-        List<DbSelectDTO> selects = JsonSerializer.Deserialize<List<DbSelectDTO>>(json, new JsonSerializerOptions
+        List<DbQueryDto> selects = JsonSerializer.Deserialize<List<DbQueryDto>>(json, new JsonSerializerOptions
         {
             IncludeFields = true
         });
@@ -88,9 +88,9 @@ public static class JsonParser
         return selects;
     }
     
-    private static Select DTOToSelect(DbSelectDTO dbDTO, Config config)
+    private static Query DTOToSelect(DbQueryDto dbDTO, Config config)
     {
-        return new DbSelect
+        return new DbQuery
         {
             name = dbDTO.name,
             connection = config.Connections.FirstOrDefault(c => c.name == dbDTO.connection),
@@ -107,11 +107,11 @@ public static class JsonParser
         {
             Connections = config.Connections,
             Notifications = config.Notifications,
-            Selects = config.Selects.Select(s =>
+            Queries = config.Queries.Select(s =>
             {
-                if (s is DbSelect dbSelect)
+                if (s is DbQuery dbSelect)
                 {
-                    return new DbSelectDTO
+                    return new DbQueryDto
                     {
                         name = dbSelect.name,
                         connection = dbSelect.connection?.name,

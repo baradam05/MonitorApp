@@ -1,6 +1,6 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class SMSNotification : Notification
+public class SMSNotificationDTO : Notification
 {
     public string AccountSid { get; set; } = "your-account-sid";
     public string AuthToken { get; set; } = "your-auth-token";
