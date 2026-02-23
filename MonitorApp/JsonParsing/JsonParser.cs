@@ -50,17 +50,17 @@ public static class JsonParser
         config.Notifications = dto.Notifications;
         config.Queries = new();
         
-        foreach(Query selectDTO in dto.Queries)
+        foreach(QueryDTO selectDTO in dto.Queries)
         {
-            if (selectDTO is DbQueryDto dbDTO)
+            if (selectDTO is DbQueryStringDto dbDTO)
             {
-                Query s = DTOToSelect(dbDTO, config);
+                QueryDTO s = DTOToSelect(dbDTO, config);
                 config.Queries.Add(s);
             }
-            else if (selectDTO is InFile inFile)
+            else if (selectDTO is InFileDTO inFile)
             {
-                List <DbQueryDto> selectsFromFile = LoadSelectsFromFile(inFile.path);
-                foreach (DbQueryDto inFileSelect in selectsFromFile)
+                List <DbQueryStringDto> selectsFromFile = LoadSelectsFromFile(inFile.path);
+                foreach (DbQueryStringDto inFileSelect in selectsFromFile)
                 {
                     config.Queries.Add(DTOToSelect(inFileSelect, config));
                 }
@@ -70,7 +70,7 @@ public static class JsonParser
         return config;
     }
 
-    private static List<DbQueryDto> LoadSelectsFromFile(string filePath)
+    private static List<DbQueryStringDto> LoadSelectsFromFile(string filePath)
     {
         filePath = Path.Combine(AppContext.BaseDirectory, filePath);
         if (!File.Exists(filePath))
@@ -80,7 +80,7 @@ public static class JsonParser
         }
         
         string json = File.ReadAllText(filePath);
-        List<DbQueryDto> selects = JsonSerializer.Deserialize<List<DbQueryDto>>(json, new JsonSerializerOptions
+        List<DbQueryStringDto> selects = JsonSerializer.Deserialize<List<DbQueryStringDto>>(json, new JsonSerializerOptions
         {
             IncludeFields = true
         });
@@ -88,15 +88,15 @@ public static class JsonParser
         return selects;
     }
     
-    private static Query DTOToSelect(DbQueryDto dbDTO, Config config)
+    private static QueryDTO DTOToSelect(DbQueryStringDto dbStringDto, Config config)
     {
-        return new DbQuery
+        return new DbQueryDto
         {
-            name = dbDTO.name,
-            connection = config.Connections.FirstOrDefault(c => c.name == dbDTO.connection),
-            queryText = dbDTO.queryText,
+            name = dbStringDto.name,
+            ConnectionDto = config.Connections.FirstOrDefault(c => c.name == dbStringDto.connection),
+            queryText = dbStringDto.queryText,
             notifications = config.Notifications
-                .Where(n => dbDTO.notifications.Contains(n.name))
+                .Where(n => dbStringDto.notifications.Contains(n.name))
                 .ToList()
         };
     }
@@ -109,12 +109,12 @@ public static class JsonParser
             Notifications = config.Notifications,
             Queries = config.Queries.Select(s =>
             {
-                if (s is DbQuery dbSelect)
+                if (s is DbQueryDto dbSelect)
                 {
-                    return new DbQueryDto
+                    return new DbQueryStringDto
                     {
                         name = dbSelect.name,
-                        connection = dbSelect.connection?.name,
+                        connection = dbSelect.ConnectionDto?.name,
                         queryText = dbSelect.queryText,
                         notifications = dbSelect.notifications.Select(n => n.name).ToList()
                     };

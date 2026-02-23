@@ -1,6 +1,6 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class InFile : Query
+public class InFileDTO : QueryDTO
 {
     public string path { get; set; }
 }

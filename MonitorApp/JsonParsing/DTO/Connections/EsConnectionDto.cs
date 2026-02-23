@@ -1,6 +1,6 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class ESConnectionDTO : Connection
+public class EsConnectionDto : ConnectionDTO
 {
     public string uri { get; set; }
     public string username { get; set; }

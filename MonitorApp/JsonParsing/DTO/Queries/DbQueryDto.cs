@@ -1,14 +1,14 @@
 namespace MonitorApp.JsonParsing.Help_classes;
 
-public class DbQuery : Query
+public class DbQueryDto : QueryDTO
 {
-    public Connection connection;
+    public ConnectionDTO ConnectionDto;
     public string queryText = "SELECT * FROM Table";
     public string notificationText = "Notification text";
-    public List<Notification> notifications;
+    public List<NotificationDto> notifications;
 }
 
-public class DbQueryDto : Query
+public class DbQueryStringDto : QueryDTO
 {
     public string connection;
     public string queryText = "SELECT * FROM Table";

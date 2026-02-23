@@ -2,16 +2,16 @@ using System;
 using Microsoft.Data.SqlClient;
 using MonitorApp.Queries;
 
-public class SQLConnection : IConnection
+public class SQLConnection : Connection
 {
     public string connectionString { get; set; }
-
+    
     public SQLConnection(string connectionString)
     {
         this.connectionString = connectionString;
     }
 
-    public bool ExecuteQuery(string queryText)
+    public override bool ExecuteQuery(string queryText)
     {
         using (SqlConnection connection = new(connectionString))
         using (SqlCommand command = new SqlCommand(queryText, connection))

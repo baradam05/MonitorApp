@@ -4,20 +4,20 @@ using MonitorApp.JsonParsing.Help_classes;
 using MonitorApp.Queries;
 using Nest;
 
-public class ESConnection : MonitorApp.Queries.IConnection
+public class ESConnection : MonitorApp.Queries.Connection
 {
     private readonly ElasticClient client;
 
-    public ESConnection(ESConnectionDTO esc)
+    public ESConnection(EsConnectionDto esc)
     {
-        var settings = new ConnectionSettings(new Uri(esc.uri))
+        ConnectionSettings settings = new ConnectionSettings(new Uri(esc.uri))
             .BasicAuthentication(esc.username, esc.password)
             .DefaultIndex(esc.deafultIndex);
 
         client = new ElasticClient(settings);
     }
 
-    public bool ExecuteQuery(string queryText)
+    public override bool ExecuteQuery(string queryText)
     {
         ISearchResponse<object> response = client.Search<object>(s => s
             .Query(q => q

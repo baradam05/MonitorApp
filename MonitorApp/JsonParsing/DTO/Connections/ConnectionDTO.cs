@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 namespace MonitorApp.JsonParsing.Help_classes;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(SQLConnectionDTO), "sql")]
-[JsonDerivedType(typeof(ESConnectionDTO), "elastic")]
-public abstract class Connection
+[JsonDerivedType(typeof(SqlConnectionDto), "sql")]
+[JsonDerivedType(typeof(EsConnectionDto), "elastic")]
+public abstract class ConnectionDTO
 {
     public string name { get; set; }
 }

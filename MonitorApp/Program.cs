@@ -9,11 +9,13 @@ class Program
 {
     static void Main(string[] args)
     {
-        Config c =  JsonParser.Load();
         string? command = args.Length != 0 ? args[0] : null;
         if (command == null)
         {
             //Defualt
+            
+            App app = new App();
+            app.Run();
             return;
         }
         
