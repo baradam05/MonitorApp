@@ -15,6 +15,8 @@ public class EmailNotification : Notification
 
     public override async Task Notify(string message)
     {
+        Console.WriteLine($" - EMAIL Notification: {message}");
+        
         using SmtpClient smtpClient = new(config.SmtpServer, int.Parse(config.SmtpPort))
         {
             Credentials = new NetworkCredential(config.Username, config.Password),

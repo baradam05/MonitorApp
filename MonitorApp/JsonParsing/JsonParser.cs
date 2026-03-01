@@ -48,21 +48,21 @@ public static class JsonParser
         Config config = new();
         config.Connections = dto.Connections;
         config.Notifications = dto.Notifications;
-        config.Queries = new();
+        config.QueriesObjects = new();
         
         foreach(QueryDTO selectDTO in dto.Queries)
         {
             if (selectDTO is DbQueryStringDto dbDTO)
             {
-                QueryDTO s = DTOToSelect(dbDTO, config);
-                config.Queries.Add(s);
+                DbQueryDto s = DTOToSelect(dbDTO, config);
+                config.QueriesObjects.Add(s);
             }
             else if (selectDTO is InFileDTO inFile)
             {
                 List <DbQueryStringDto> selectsFromFile = LoadSelectsFromFile(inFile.path);
                 foreach (DbQueryStringDto inFileSelect in selectsFromFile)
                 {
-                    config.Queries.Add(DTOToSelect(inFileSelect, config));
+                    config.QueriesObjects.Add(DTOToSelect(inFileSelect, config));
                 }
             }
         }
@@ -88,13 +88,15 @@ public static class JsonParser
         return selects;
     }
     
-    private static QueryDTO DTOToSelect(DbQueryStringDto dbStringDto, Config config)
+    private static DbQueryDto DTOToSelect(DbQueryStringDto dbStringDto, Config config)
     {
         return new DbQueryDto
         {
             name = dbStringDto.name,
             ConnectionDto = config.Connections.FirstOrDefault(c => c.name == dbStringDto.connection),
             queryText = dbStringDto.queryText,
+            queryLang = dbStringDto.queryLang,
+            notificationText = dbStringDto.notificationText,
             notifications = config.Notifications
                 .Where(n => dbStringDto.notifications.Contains(n.name))
                 .ToList()
@@ -103,27 +105,29 @@ public static class JsonParser
     
     private static Config ConfigToDTO(Config config)
     {
-        var dto = new Config
-        {
-            Connections = config.Connections,
-            Notifications = config.Notifications,
-            Queries = config.Queries.Select(s =>
-            {
-                if (s is DbQueryDto dbSelect)
-                {
-                    return new DbQueryStringDto
-                    {
-                        name = dbSelect.name,
-                        connection = dbSelect.ConnectionDto?.name,
-                        queryText = dbSelect.queryText,
-                        notifications = dbSelect.notifications.Select(n => n.name).ToList()
-                    };
-                }
+        throw new NotImplementedException();
 
-                return s;
-            }).ToList()
-        };
-
-        return dto;
+        //var dto = new Config
+        //{
+        //    Connections = config.Connections,
+        //    Notifications = config.Notifications,
+        //    Queries = config.Queries.Select<DbQueryDto, DbQueryStringDto>(s =>
+        //    {
+        //        if (s is DbQueryDto dbSelect)
+        //        {
+        //            return new DbQueryStringDto
+        //            {
+        //                name = dbSelect.name,
+        //                connection = dbSelect.ConnectionDto?.name,
+        //                queryText = dbSelect.queryText,
+        //                notifications = dbSelect.notifications.Select(n => n.name).ToList()
+        //            };
+        //        }
+        //
+        //        return s;
+        //    }).ToList()
+        //};
+        //
+        //return dto;
     }
 }

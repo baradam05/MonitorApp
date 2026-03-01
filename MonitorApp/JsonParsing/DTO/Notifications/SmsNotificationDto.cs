@@ -2,6 +2,7 @@ namespace MonitorApp.JsonParsing.Help_classes;
 
 public class SmsNotificationDto : NotificationDto
 {
+    public string ApiUrl { get; set; } = "https://api.smsprovider.com/send";
     public string AccountSid { get; set; } = "your-account-sid";
     public string AuthToken { get; set; } = "your-auth-token";
     public string FromNumber { get; set; } = "+1234567890";

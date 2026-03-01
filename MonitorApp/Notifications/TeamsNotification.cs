@@ -17,15 +17,40 @@ public class TeamsNotification : Notification
 
     public override async Task Notify(string message)
     {
-        Object payload = new
+        var payload = new
         {
-            text = message
+            type = "message",
+            attachments = new[]
+            {
+                new
+                {
+                    contentType = "application/vnd.microsoft.card.adaptive",
+                    content = new
+                    {
+                        type = "AdaptiveCard",
+                        version = "1.4",
+                        body = new[]
+                        {
+                            new { 
+                                type = "TextBlock", 
+                                text = message,
+                                wrap = true 
+                            }
+                        }
+                    }
+                }
+            }
         };
 
         string json = JsonSerializer.Serialize(payload);
-        StringContent content = new(json, Encoding.UTF8, "application/json");
+        using StringContent content = new(json, Encoding.UTF8, "application/json");
 
         HttpResponseMessage response = await httpClient.PostAsync(config.WebhookUrl, content);
-        response.EnsureSuccessStatusCode();
+    
+        if (!response.IsSuccessStatusCode)
+        {
+            string error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Teams notification failed: {response.StatusCode}, Details: {error}");
+        }
     }
 }

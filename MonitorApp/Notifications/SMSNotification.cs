@@ -6,30 +6,38 @@ using Notification = MonitorApp.Notifications.Notification;
 
 public class SMSNotification : Notification
 {
-    private readonly SmsNotificationDto config;
     private readonly HttpClient httpClient;
+    private readonly SmsNotificationDto config;
 
-    public SMSNotification(SmsNotificationDto smsNotificationDto)
+    public SMSNotification(SmsNotificationDto config)
     {
-        config = smsNotificationDto;
-        httpClient = new HttpClient();
+        this.httpClient = new HttpClient();
+        this.config = config;
     }
 
     public override async Task Notify(string message)
     {
-        string url = $"https://api.twilio.com/2010-04-01/Accounts/{config.AccountSid}/Messages.json";
+        Console.WriteLine($" - SMS Notification: {message}");
+        
+        
+        var authBytes = Encoding.ASCII.GetBytes(
+            $"{config.AccountSid}:{config.AuthToken}"
+        );
 
-        byte[] byteArray = Encoding.ASCII.GetBytes($"{config.AccountSid}:{config.AuthToken}");
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+        httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Basic",
+                Convert.ToBase64String(authBytes)
+            );
 
-        FormUrlEncodedContent content = new(new[]
+        var content = new FormUrlEncodedContent(new[]
         {
-            new KeyValuePair<string, string>("From", config.FromNumber),
-            new KeyValuePair<string, string>("To", config.ToNumber),
-            new KeyValuePair<string, string>("Body", message)
+            new KeyValuePair<string,string>("From", config.FromNumber),
+            new KeyValuePair<string,string>("To", config.ToNumber),
+            new KeyValuePair<string,string>("Body", message)
         });
 
-        HttpResponseMessage response = await httpClient.PostAsync(url, content);
+        var response = await httpClient.PostAsync(config.ApiUrl, content);
         response.EnsureSuccessStatusCode();
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Data.SqlClient;
+using MonitorApp.JsonParsing.Help_classes;
 using MonitorApp.Queries;
 
 public class SQLConnection : Connection
@@ -11,10 +12,10 @@ public class SQLConnection : Connection
         this.connectionString = connectionString;
     }
 
-    public override bool ExecuteQuery(string queryText)
+    public override bool ExecuteQuery(DbQueryDto query)
     {
         using (SqlConnection connection = new(connectionString))
-        using (SqlCommand command = new SqlCommand(queryText, connection))
+        using (SqlCommand command = new SqlCommand(query.queryText, connection))
         {
             try
             {

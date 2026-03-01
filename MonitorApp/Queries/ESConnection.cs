@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using Elasticsearch.Net;
 using MonitorApp.JsonParsing.Help_classes;
 using MonitorApp.Queries;
@@ -12,19 +13,46 @@ public class ESConnection : MonitorApp.Queries.Connection
     {
         ConnectionSettings settings = new ConnectionSettings(new Uri(esc.uri))
             .BasicAuthentication(esc.username, esc.password)
-            .DefaultIndex(esc.deafultIndex);
+            .DefaultIndex(esc.defaultIndex);
 
         client = new ElasticClient(settings);
     }
 
-    public override bool ExecuteQuery(string queryText)
+    public override bool ExecuteQuery(DbQueryDto query)
     {
-        ISearchResponse<object> response = client.Search<object>(s => s
-            .Query(q => q
-                .QueryString(qs => qs.Query(queryText))
-            )
-        );
+        if (query.queryLang == "sql")
+        {
+            var response = client.Sql.Query(q => q.Query(query.queryText));
+            return response.IsValid && response.Rows.Any();
+        }
+        
+        var defaultIndex = client.ConnectionSettings.DefaultIndex;
+        var jsonQueryResponse = client.LowLevel.Search<StringResponse>(defaultIndex, query.queryText);
 
-        return response.IsValid && response.Documents.Any();
+        if (!jsonQueryResponse.Success)
+        {
+            Console.WriteLine(jsonQueryResponse.OriginalException?.Message);
+            return false;
+        }
+
+        using (JsonDocument doc = JsonDocument.Parse(jsonQueryResponse.Body))
+        {
+            JsonElement root = doc.RootElement;
+            if (root.TryGetProperty("hits", out JsonElement hitsElement))
+            {
+                if (hitsElement.TryGetProperty("total", out JsonElement totalElement))
+                {
+                    if (totalElement.TryGetProperty("value", out JsonElement valueElement))
+                    {
+                        if (valueElement.TryGetInt32(out int totalValue) && totalValue > 0)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 }

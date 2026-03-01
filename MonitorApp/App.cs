@@ -1,3 +1,4 @@
+using System.Globalization;
 using Elasticsearch.Net;
 using MonitorApp.JsonParsing;
 using MonitorApp.JsonParsing.Help_classes;
@@ -12,10 +13,10 @@ public class App
 {
     private Config config;
 
-    public void Run()
+    public async Task Run()
     {
         config = JsonParser.Load();
-        if (config == null || config.Queries == null || config.Queries.Count == 0)
+        if (config == null || config.QueriesObjects == null || config.QueriesObjects.Count == 0)
         {
             Console.WriteLine("No queries found");
             return;
@@ -27,15 +28,15 @@ public class App
         LoadConnections(connections);
         LoadNotifications(notifications);
 
-        RunQueries(config.Queries, connections, notifications);
+        await RunQueries(config.QueriesObjects, connections, notifications);
     }
 
-    private void RunQueries(List<DbQueryDto> queries, List<Connection> connections, List<Notification> notifications)
+    private async Task RunQueries(List<DbQueryDto> queries, List<Connection> connections, List<Notification> notifications)
     {
         foreach (DbQueryDto q in queries)
         {
             Connection c = connections.FirstOrDefault(c => c.Name == q.ConnectionDto.name);
-            List<Notification> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.name)).ToList();
+            List<Notification> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.Name)).ToList();
             if (c == null)
             {
                 Console.WriteLine($"Connection {q.ConnectionDto.name} not found for query {q.name}");
@@ -48,27 +49,35 @@ public class App
                 continue;
             }
 
-            if (c.ExecuteQuery(q.queryText))
+            if (c.ExecuteQuery(q))
             {
-                foreach (Notification notification in ns)
+                try
                 {
-                    notifications.ForEach(n => n.Notify(q.notificationText));
+                    foreach (var n in ns)
+                    {
+                        await n.Notify(q.notificationText);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
                 }
             }
         }
     }
-    
+
     private void LoadConnections(List<Queries.Connection> connections)
     {
         foreach (ConnectionDTO connection in config.Connections)
         {
             if (connection is SqlConnectionDto sqlConnectionDto)
             {
-                connections.Add(new SQLConnection(sqlConnectionDto.connectionString));
+                connections.Add(new SQLConnection(sqlConnectionDto.connectionString) { Name = connection.name });
             }
             else if (connection is EsConnectionDto esConnectionDto)
             {
-                connections.Add(new ESConnection(esConnectionDto));
+                connections.Add(new ESConnection(esConnectionDto) { Name = connection.name });
             }
         }
     }
@@ -79,15 +88,15 @@ public class App
         {
             if (notification is EmailNotificationDto emailNotificationDto)
             {
-                notifications.Add(new EmailNotification(emailNotificationDto));
+                notifications.Add(new EmailNotification(emailNotificationDto) { Name = notification.name });
             }
             else if (notification is SmsNotificationDto smsNotificationDto)
             {
-                notifications.Add(new SMSNotification(smsNotificationDto));
+                notifications.Add(new SMSNotification(smsNotificationDto) { Name = notification.name });
             }
             else if (notification is TeamsNotificationsDto teamsNotificationDto)
             {
-                notifications.Add(new TeamsNotification(teamsNotificationDto));
+                notifications.Add(new TeamsNotification(teamsNotificationDto) { Name = notification.name });
             }
         }
     }

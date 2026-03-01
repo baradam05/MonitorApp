@@ -7,7 +7,7 @@ namespace MonitorApp;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         string? command = args.Length != 0 ? args[0] : null;
         if (command == null)
@@ -15,7 +15,7 @@ class Program
             //Defualt
             
             App app = new App();
-            app.Run();
+            await app.Run();
             return;
         }
         
