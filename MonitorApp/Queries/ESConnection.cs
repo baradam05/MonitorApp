@@ -22,12 +22,12 @@ public class ESConnection : MonitorApp.Queries.Connection
     {
         if (query.queryLang == "sql")
         {
-            var response = client.Sql.Query(q => q.Query(query.queryText));
+            QuerySqlResponse response = client.Sql.Query(q => q.Query(query.queryText));
             return response.IsValid && response.Rows.Any();
         }
         
-        var defaultIndex = client.ConnectionSettings.DefaultIndex;
-        var jsonQueryResponse = client.LowLevel.Search<StringResponse>(defaultIndex, query.queryText);
+        string defaultIndex = client.ConnectionSettings.DefaultIndex;
+        StringResponse jsonQueryResponse = client.LowLevel.Search<StringResponse>(defaultIndex, query.queryText);
 
         if (!jsonQueryResponse.Success)
         {
@@ -35,22 +35,30 @@ public class ESConnection : MonitorApp.Queries.Connection
             return false;
         }
 
-        using (JsonDocument doc = JsonDocument.Parse(jsonQueryResponse.Body))
+        try
         {
-            JsonElement root = doc.RootElement;
-            if (root.TryGetProperty("hits", out JsonElement hitsElement))
+            using (JsonDocument doc = JsonDocument.Parse(jsonQueryResponse.Body))
             {
-                if (hitsElement.TryGetProperty("total", out JsonElement totalElement))
+                JsonElement root = doc.RootElement;
+                if (root.TryGetProperty("hits", out JsonElement hitsElement))
                 {
-                    if (totalElement.TryGetProperty("value", out JsonElement valueElement))
+                    if (hitsElement.TryGetProperty("total", out JsonElement totalElement))
                     {
-                        if (valueElement.TryGetInt32(out int totalValue) && totalValue > 0)
+                        if (totalElement.TryGetProperty("value", out JsonElement valueElement))
                         {
-                            return true;
+                            if (valueElement.TryGetInt32(out int totalValue) && totalValue > 0)
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
             }
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Error parsing Elasticsearch response for query '{query.name}': {ex.Message}");
+            return false;
         }
 
         return false;

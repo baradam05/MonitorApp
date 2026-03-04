@@ -2,12 +2,12 @@ namespace MonitorApp.JsonParsing.Help_classes;
 
 public class EmailNotificationDto : NotificationDto
 {
-    public string SmtpServer { get; set; } = "smtp.gmail.com";
-    public string SmtpPort { get; set; } = "587";
-    public string? Username { get; set; } = "your-email@gmail.com";
-    public string? Password { get; set; } = "your-password";
-    public string FromEmail { get; set; } = "your-email@gmail.com";
-    public string ToEmail { get; set; } = "your-email@gmail.com";   
-    public string Subject { get; set; } = "Notification";
-    public string UseSsl { get; set; } = "true";
+    public required string smtpServer { get; set; }
+    public required string smtpPort { get; set; }
+    public  string? username { get; set;}
+    public  string? password { get; set;}
+    public required string fromEmail { get; set; }
+    public required string toEmail { get; set; }   
+    public required string subject { get; set; }
+    public required string useSsl { get; set; }
 }

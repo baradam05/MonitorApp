@@ -10,28 +10,31 @@ class Program
     static async Task Main(string[] args)
     {
         string? command = args.Length != 0 ? args[0] : null;
+        App app = new App();
         if (command == null)
         {
-            //Defualt
-            
-            App app = new App();
-            await app.Run();
+            try
+            {
+                await app.Run();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"FATAL: An unhandled error occurred and the application must close.");
+                Console.WriteLine(e.Message);
+            }
             return;
         }
         
-        Match m = Regex.Match(command,
-            @"^/test:(?:""([^""]+)""|(.+))$",
-            RegexOptions.IgnoreCase);
+        Match m = Regex.Match(command, @"^/test:(?:""([^""]+)""|(.+))$", RegexOptions.IgnoreCase);
         if (m.Success)
         {
-            var name = m.Groups[1].Success
+            string name = m.Groups[1].Success
                 ? m.Groups[1].Value
                 : m.Groups[2].Value;
 
-            Console.WriteLine(name);
+            await app.Run(name);
             return;
         }
-
 
         Console.WriteLine($"Unknown command: {command}");
     }

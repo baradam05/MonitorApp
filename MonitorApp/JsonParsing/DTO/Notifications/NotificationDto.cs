@@ -8,5 +8,5 @@ namespace MonitorApp.JsonParsing.Help_classes;
 [JsonDerivedType(typeof(TeamsNotificationsDto), "teams")]
 public abstract class NotificationDto
 {
-    public string name { get; set; }
+    public required string name { get; set; }
 }

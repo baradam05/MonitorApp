@@ -8,20 +8,39 @@ public class SMSNotification : Notification
 {
     private readonly HttpClient httpClient;
     private readonly SmsNotificationDto config;
+    private readonly JsonApiSender sender;
 
-    public SMSNotification(SmsNotificationDto config)
+    public SMSNotification(SmsNotificationDto config,JsonApiSender sender)
     {
         this.httpClient = new HttpClient();
         this.config = config;
+        this.sender = sender;
     }
-
+    
     public override async Task Notify(string message)
     {
-        Console.WriteLine($" - SMS Notification: {message}");
-        
-        
-        var authBytes = Encoding.ASCII.GetBytes(
-            $"{config.AccountSid}:{config.AuthToken}"
+        try
+        {
+            Console.WriteLine($" - Sending SMS notification for '{Name}': {message}");
+            object payload = new
+            {
+                from = config.fromNumber,
+                to = config.toNumber,
+                message = message
+            };
+
+            await sender.PostJsonAsync(config.apiUrl, payload);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An unexpected error occurred while sending SMS notification for '{Name}'. Details: {ex.Message}");
+        }
+    }
+    
+    public async Task NotifyOLD(string message)
+    {
+        byte[] authBytes = Encoding.ASCII.GetBytes(
+            $"{config.accountSid}:{config.authToken}"
         );
 
         httpClient.DefaultRequestHeaders.Authorization =
@@ -30,14 +49,16 @@ public class SMSNotification : Notification
                 Convert.ToBase64String(authBytes)
             );
 
-        var content = new FormUrlEncodedContent(new[]
+        FormUrlEncodedContent content = new FormUrlEncodedContent(new[]
         {
-            new KeyValuePair<string,string>("From", config.FromNumber),
-            new KeyValuePair<string,string>("To", config.ToNumber),
+            new KeyValuePair<string,string>("From", config.fromNumber),
+            new KeyValuePair<string,string>("To", config.toNumber),
             new KeyValuePair<string,string>("Body", message)
         });
 
-        var response = await httpClient.PostAsync(config.ApiUrl, content);
+        HttpResponseMessage response = await httpClient.PostAsync(config.apiUrl, content);
         response.EnsureSuccessStatusCode();
     }
+
+
 }

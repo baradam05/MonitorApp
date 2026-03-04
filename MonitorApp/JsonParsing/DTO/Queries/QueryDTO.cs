@@ -7,5 +7,5 @@ namespace MonitorApp.JsonParsing.Help_classes;
 [JsonDerivedType(typeof(InFileDTO), "inFile")]
 public abstract class QueryDTO
 {
-    public string name;
+    public required string name;
 }

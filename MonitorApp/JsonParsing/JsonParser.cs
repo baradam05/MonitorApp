@@ -1,13 +1,14 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using MonitorApp.JsonParsing.Help_classes;
+using MonitorApp.Queries;
 
 namespace MonitorApp.JsonParsing;
 
 public static class JsonParser
 {
     private static string filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
-    private static Config config = null;
+    private static Config? config = null;
     
     public static Config? Load()
     {
@@ -15,35 +16,25 @@ public static class JsonParser
             return null;
         if (config != null)
             return config;
-        
-        string json = File.ReadAllText(filePath);
-        Config? configDTO = JsonSerializer.Deserialize<Config>(json, new JsonSerializerOptions
-        {
-            IncludeFields = true
-        });
 
-        return DTOToConfig(configDTO);
+        try
+        {
+            string json = File.ReadAllText(filePath);
+            Config? configDTO = JsonSerializer.Deserialize<Config>(json, new JsonSerializerOptions
+            {
+                IncludeFields = true
+            });
+            
+            return DTOToConfig(configDTO);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
     }
 
-    public static void Save(Config config)
-    {
-        throw new Exception("\n\nNot tested yet, use with caution\n\n");
-        Config configDTO = ConfigToDTO(config);
-
-        string json = JsonSerializer.Serialize(configDTO, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            IncludeFields = true
-        });
-
-        if (!File.Exists(filePath))
-            File.Create(filePath).Close();
-
-        using (StreamWriter sw = new StreamWriter(filePath))
-            sw.Write(json);
-    }
-
-    private static Config DTOToConfig(Config dto)
+    private static Config? DTOToConfig(Config dto)
     {
         Config config = new();
         config.Connections = dto.Connections;
@@ -54,15 +45,23 @@ public static class JsonParser
         {
             if (selectDTO is DbQueryStringDto dbDTO)
             {
-                DbQueryDto s = DTOToSelect(dbDTO, config);
-                config.QueriesObjects.Add(s);
+                DbQueryDto? query = DTOToSelect(dbDTO, config);
+                if (query == null)
+                    return null;
+                
+                config.QueriesObjects.Add(query);
             }
             else if (selectDTO is InFileDTO inFile)
             {
-                List <DbQueryStringDto> selectsFromFile = LoadSelectsFromFile(inFile.path);
+                List <DbQueryStringDto>? selectsFromFile = LoadSelectsFromFile(inFile.path);
+                if(selectsFromFile == null)
+                    return null;
                 foreach (DbQueryStringDto inFileSelect in selectsFromFile)
                 {
-                    config.QueriesObjects.Add(DTOToSelect(inFileSelect, config));
+                    DbQueryDto? query = DTOToSelect(inFileSelect, config);
+                    if (query == null)
+                        return null;
+                    config.QueriesObjects.Add(query);
                 }
             }
         }
@@ -70,64 +69,57 @@ public static class JsonParser
         return config;
     }
 
-    private static List<DbQueryStringDto> LoadSelectsFromFile(string filePath)
+    private static List<DbQueryStringDto>? LoadSelectsFromFile(string filePath)
     {
         filePath = Path.Combine(AppContext.BaseDirectory, filePath);
         if (!File.Exists(filePath))
         {
             Console.WriteLine("File not found: " + filePath);
-            return new();
+            return null;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(filePath);
+            List<DbQueryStringDto>? selects = JsonSerializer.Deserialize<List<DbQueryStringDto>>(json, new JsonSerializerOptions
+            {
+                IncludeFields = true
+            });
+        
+            return selects;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
         }
         
-        string json = File.ReadAllText(filePath);
-        List<DbQueryStringDto> selects = JsonSerializer.Deserialize<List<DbQueryStringDto>>(json, new JsonSerializerOptions
-        {
-            IncludeFields = true
-        });
-        
-        return selects;
     }
     
-    private static DbQueryDto DTOToSelect(DbQueryStringDto dbStringDto, Config config)
+    private static DbQueryDto? DTOToSelect(DbQueryStringDto dbStringDto, Config config)
     {
+        ConnectionDTO? c = config.Connections.FirstOrDefault(c => c.name == dbStringDto.connection);
+        List<NotificationDto> ns = config.Notifications.Where(n => dbStringDto.notifications.Contains(n.name)).ToList();
+
+        if (c == null)
+        {
+            Console.WriteLine("Connection not found: " + dbStringDto.connection);
+            return null;
+        }
+        else if (ns.Count == 0)
+        {
+            Console.WriteLine("Connection not found: " + dbStringDto.connection);
+            return null;
+        }
+        
         return new DbQueryDto
         {
             name = dbStringDto.name,
-            ConnectionDto = config.Connections.FirstOrDefault(c => c.name == dbStringDto.connection),
+            ConnectionDto = c,
             queryText = dbStringDto.queryText,
             queryLang = dbStringDto.queryLang,
             notificationText = dbStringDto.notificationText,
-            notifications = config.Notifications
-                .Where(n => dbStringDto.notifications.Contains(n.name))
-                .ToList()
+            notifications = ns
         };
-    }
-    
-    private static Config ConfigToDTO(Config config)
-    {
-        throw new NotImplementedException();
-
-        //var dto = new Config
-        //{
-        //    Connections = config.Connections,
-        //    Notifications = config.Notifications,
-        //    Queries = config.Queries.Select<DbQueryDto, DbQueryStringDto>(s =>
-        //    {
-        //        if (s is DbQueryDto dbSelect)
-        //        {
-        //            return new DbQueryStringDto
-        //            {
-        //                name = dbSelect.name,
-        //                connection = dbSelect.ConnectionDto?.name,
-        //                queryText = dbSelect.queryText,
-        //                notifications = dbSelect.notifications.Select(n => n.name).ToList()
-        //            };
-        //        }
-        //
-        //        return s;
-        //    }).ToList()
-        //};
-        //
-        //return dto;
     }
 }

@@ -7,50 +7,50 @@ using Notification = MonitorApp.Notifications.Notification;
 public class TeamsNotification : Notification
 {
     private readonly TeamsNotificationsDto config;
-    private readonly HttpClient httpClient;
+    private readonly JsonApiSender sender;
 
-    public TeamsNotification(TeamsNotificationsDto notification)
+    public TeamsNotification(TeamsNotificationsDto config, JsonApiSender sender)
     {
-        config = notification;
-        httpClient = new HttpClient();
+        this.config = config;
+        this.sender = sender;
     }
 
     public override async Task Notify(string message)
     {
-        var payload = new
+        try
         {
-            type = "message",
-            attachments = new[]
+            Console.WriteLine($" - Sending Teams notification for '{Name}': {message}");
+            object payload = new
             {
-                new
+                type = "message",
+                attachments = new[]
                 {
-                    contentType = "application/vnd.microsoft.card.adaptive",
-                    content = new
+                    new
                     {
-                        type = "AdaptiveCard",
-                        version = "1.4",
-                        body = new[]
+                        contentType = "application/vnd.microsoft.card.adaptive",
+                        content = new
                         {
-                            new { 
-                                type = "TextBlock", 
-                                text = message,
-                                wrap = true 
+                            type = "AdaptiveCard",
+                            version = "1.4",
+                            body = new[]
+                            {
+                                new
+                                {
+                                    type = "TextBlock",
+                                    text = message,
+                                    wrap = true
+                                }
                             }
                         }
                     }
                 }
-            }
-        };
+            };
 
-        string json = JsonSerializer.Serialize(payload);
-        using StringContent content = new(json, Encoding.UTF8, "application/json");
-
-        HttpResponseMessage response = await httpClient.PostAsync(config.WebhookUrl, content);
-    
-        if (!response.IsSuccessStatusCode)
+            await sender.PostJsonAsync(config.webhookUrl, payload);
+        }
+        catch (Exception ex)
         {
-            string error = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Teams notification failed: {response.StatusCode}, Details: {error}");
+            Console.WriteLine($"An unexpected error occurred while sending Teams notification for '{Name}'. Details: {ex.Message}");
         }
     }
 }
