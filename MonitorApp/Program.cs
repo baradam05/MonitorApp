@@ -10,19 +10,22 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        string configPath = Path.Combine(AppContext.BaseDirectory, "_Config", "config.json");
+        string configDir = Path.Combine(AppContext.BaseDirectory, "_Config");
+        string configPath = Path.Combine(configDir, "config.json");
+
         if (!File.Exists(configPath))
         {
             Console.WriteLine($"Configuration file not found at '{configPath}'.");
 
-            Directory.CreateDirectory(configPath);
+            Directory.CreateDirectory(configDir);
+
             string defaultConfig = """
-            {
-              "Connections": [],
-              "Notifications": [],
-              "Queries": []
-            }
-            """;
+                                   {
+                                     "Connections": [],
+                                     "Notifications": [],
+                                     "Queries": []
+                                   }
+                                   """;
 
             File.WriteAllText(configPath, defaultConfig);
 
