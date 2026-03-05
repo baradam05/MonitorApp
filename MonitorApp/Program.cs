@@ -15,7 +15,7 @@ class Program
         {
             Console.WriteLine($"Configuration file not found at '{configPath}'.");
 
-            Directory.CreateDirectory(configDir);
+            Directory.CreateDirectory(configPath);
             string defaultConfig = """
             {
               "Connections": [],
