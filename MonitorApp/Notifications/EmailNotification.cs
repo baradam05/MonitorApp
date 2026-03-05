@@ -23,8 +23,6 @@ public class EmailNotification : Notification
                 return;
             }
 
-            Console.WriteLine($" - Sending EMAIL notification for '{Name}': {message}");
-        
             using SmtpClient smtpClient = new(config.smtpServer, port)
             {
                 Credentials = new NetworkCredential(config.username, config.password),
@@ -45,11 +43,11 @@ public class EmailNotification : Notification
         }
         catch (SmtpException ex)
         {
-            Console.WriteLine($"Error sending email for notification '{Name}'. Please check your SMTP settings. Details: {ex.Message}");
+            Console.WriteLine($"Error sending email for notification '{Name}'. Please check your SMTP settings:\n\n {ex.Message}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An unexpected error occurred while sending email for notification '{Name}'. Details: {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while sending email for notification '{Name}':\n\n {ex.Message}");
         }
     }
 }

@@ -19,7 +19,6 @@ public class TeamsNotification : Notification
     {
         try
         {
-            Console.WriteLine($" - Sending Teams notification for '{Name}': {message}");
             object payload = new
             {
                 type = "message",
@@ -50,7 +49,7 @@ public class TeamsNotification : Notification
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An unexpected error occurred while sending Teams notification for '{Name}'. Details: {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while sending Teams notification for '{Name}':\n\n {ex.Message}");
         }
     }
 }

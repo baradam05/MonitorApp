@@ -31,7 +31,7 @@ public class ESConnection : MonitorApp.Queries.Connection
 
         if (!jsonQueryResponse.Success)
         {
-            Console.WriteLine(jsonQueryResponse.OriginalException?.Message);
+            Console.WriteLine($"Error executing query {query.name}:\n\n {jsonQueryResponse.DebugInformation}");
             return false;
         }
 
@@ -57,7 +57,7 @@ public class ESConnection : MonitorApp.Queries.Connection
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"Error parsing Elasticsearch response for query '{query.name}': {ex.Message}");
+            Console.WriteLine($"Error parsing Elasticsearch response for query '{query.name}'\n\n: {ex.Message}");
             return false;
         }
 

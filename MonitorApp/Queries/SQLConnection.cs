@@ -25,7 +25,7 @@ public class SQLConnection : Connection
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error executing query: {ex.Message}");
+                Console.WriteLine($"Error executing query {query.name}:\n\n {ex.Message}");
                 return false;
             }
         }

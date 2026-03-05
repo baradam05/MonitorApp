@@ -17,11 +17,11 @@ public class SMSNotification : Notification
         this.sender = sender;
     }
     
+    //REST API
     public override async Task Notify(string message)
     {
         try
         {
-            Console.WriteLine($" - Sending SMS notification for '{Name}': {message}");
             object payload = new
             {
                 from = config.fromNumber,
@@ -33,10 +33,11 @@ public class SMSNotification : Notification
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An unexpected error occurred while sending SMS notification for '{Name}'. Details: {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while sending SMS notification for '{Name}':\n\n {ex.Message}");
         }
     }
     
+    //HttpClient directly
     public async Task NotifyOLD(string message)
     {
         byte[] authBytes = Encoding.ASCII.GetBytes(

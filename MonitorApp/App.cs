@@ -69,8 +69,8 @@ public class App
             }
             catch (Exception e)
             {
-                Console.WriteLine($"An error occurred while sending a notification for query '{q.name}'. Processing will continue.");
-                Console.WriteLine(e.Message);
+                Console.WriteLine($"An error occurred while sending a notification for query '{q.name}'. Processing will continue.\n\n {e.Message}");
+                Console.WriteLine();
             }
         } 
     }

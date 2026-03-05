@@ -7,13 +7,16 @@ namespace MonitorApp.JsonParsing;
 
 public static class JsonParser
 {
-    private static string filePath = Path.Combine(AppContext.BaseDirectory, "config.json");
+    private static string filePath = Path.Combine(AppContext.BaseDirectory, "_Config", "config.json");
     private static Config? config = null;
     
     public static Config? Load()
     {
         if (!File.Exists(filePath))
+        {
+            Console.WriteLine($"File not found:\n\"{filePath}\"");
             return null;
+        }
         if (config != null)
             return config;
 
@@ -29,13 +32,35 @@ public static class JsonParser
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Console.WriteLine("Failed to load or parse config file: \n" + e.Message);
             return null;
         }
     }
 
     private static Config? DTOToConfig(Config dto)
     {
+        if (dto.Connections == null || dto.Connections.Count == 0)
+        {
+            Console.WriteLine($"Connections are required in config file.");
+            return null;
+        }
+
+        if (dto.Notifications == null || dto.Notifications.Count == 0)
+        {
+            Console.WriteLine($"Notifications are required in config file.");
+            return null;
+        }
+
+        foreach (NotificationDto notif in dto.Notifications)
+        {
+            if(notif is EmailNotificationDto email)
+            if(int.TryParse(email.smtpPort, out int port) == false)
+            {
+                Console.WriteLine($"Invalid SMTP port for notification '{email.name}': {email.smtpPort}");
+                return null;
+            }
+        }
+        
         Config config = new();
         config.Connections = dto.Connections;
         config.Notifications = dto.Notifications;
@@ -66,15 +91,21 @@ public static class JsonParser
             }
         }
 
+        if (config.QueriesObjects == null || config.QueriesObjects.Count == 0)
+        {
+            Console.WriteLine($"Queries are required in config file.");
+            return null;
+        }
+        
         return config;
     }
 
     private static List<DbQueryStringDto>? LoadSelectsFromFile(string filePath)
     {
-        filePath = Path.Combine(AppContext.BaseDirectory, filePath);
+        filePath = Path.Combine(AppContext.BaseDirectory, "_Config", filePath);
         if (!File.Exists(filePath))
         {
-            Console.WriteLine("File not found: " + filePath);
+            Console.WriteLine($"File not found:\n\"{filePath}\"");
             return null;
         }
 
@@ -90,7 +121,7 @@ public static class JsonParser
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Console.WriteLine($"Failed to load or parse selects file\n\"{filePath}\": \n\n" + e.Message);
             return null;
         }
         
@@ -108,7 +139,7 @@ public static class JsonParser
         }
         else if (ns.Count == 0)
         {
-            Console.WriteLine("Connection not found: " + dbStringDto.connection);
+            Console.WriteLine("Notifications not found: " + dbStringDto.connection);
             return null;
         }
         
