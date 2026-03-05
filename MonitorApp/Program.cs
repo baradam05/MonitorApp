@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text.RegularExpressions;
 using MonitorApp.JsonParsing;
 using MonitorApp.JsonParsing.Help_classes;
@@ -9,6 +10,27 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        string configPath = Path.Combine(AppContext.BaseDirectory, "_Config", "config.json");
+        if (!File.Exists(configPath))
+        {
+            Console.WriteLine($"Configuration file not found at '{configPath}'.");
+
+            Directory.CreateDirectory(configDir);
+            string defaultConfig = """
+            {
+              "Connections": [],
+              "Notifications": [],
+              "Queries": []
+            }
+            """;
+
+            File.WriteAllText(configPath, defaultConfig);
+
+            Console.WriteLine($"Default configuration file created at '{configPath}'.");
+            Console.WriteLine("Please edit the file with your settings and restart the application.");
+            return;
+        }
+        
         string? command = args.Length != 0 ? args[0] : null;
         App app = new App();
         if (command == null)

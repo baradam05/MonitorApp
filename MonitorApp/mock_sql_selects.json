@@ -1,0 +1,13 @@
+[
+  {
+    "type": "query",
+    "name": "Sample SQL Query",
+    "connection": "MySqlConnection",
+    "queryText": "SELECT * FROM users WHERE last_login < DATE('now', '-30 days');",
+    "queryLang": "sql",
+    "notificationText": "Inactive users found",
+    "notifications": [
+      "MyEmailNotification"
+    ]
+  }
+]
