@@ -1,0 +1,17 @@
+Potřebuji v mém kodu udělat několik změn. Nejdříve chci abys zanalizoval kod a moje zadání. Rozepsal mi jak budeš pokračovat a poté se dohoneme na postupu.
+
+1) Chtěl bych udělat pořádek emzi DTO a funkčními třídami proto "Notifications" a "Connections" přejmenuje na "NotificationServices" a "ConnectionServices" -> i ostatní services takže třeba EmailNotification na EmailNotificationService atd.
+- taky nevím jestli se správné jednotné nebo množné s "s" na konci tak použíj to co je zprávné
+- všiml jsem si že třídy connection mám ve složce queries, to je chyba a take ji přejmenuj
+
+2) Co je to dependancy injection? stačí předělat moje abstract classy (, které jsou abstract zbytečně) na interface ? Pokud ano pouze mi to napiš a vypíš mi všechny třídy kde tomu tak je
+
+3) Když si dělám connection pro Elastic search, tak tam zadávám default index - to by se ale mělo řešit v dotazu (query) ne? Jak by to mělo být, jsem nový do elastic search.
+
+4) Chci udělat změnu ves struktuře DTO a tudíš celé aplikace. Toto je velká změna, takže klidně to udělej v samostatně - poté až doděláš ostatní měnší změny nebo dotazy:
+Chci, aby notifikace, byly jako obejkty dotazů - tudíš každý dotaz by měl pole "notifications" a do toho by se dávaly objekty notifikací.
+
+5) Další nová velká feature, kterou bych chtěl přidat. Zase to udělat samostatně aý se udělá zbytek:
+Chci aby zprávy v notikacích byly dynamické. Předtavuji si nějaky html/xml header, rows a footer.
+Rows by se definovali např. "Tento uživatel měl chybu: {Username}" - poté když se udělá dotaz a vrátí to X dotazů tak to vezme sloupec "Username" a Nkrát to vypíše zprávu. Header a footer jen jendou. Také pro kanály, které podporují nějaký formating (Email, asi i teams?) nějaký formátování třeba do tabulky exc.
+- Osobně mám problém si představit jak by toto mohlo fungovat a proto bych chtěl datilní návrh a nějaký pseudo kod, není potřeba rovnou aplikovaný na tento projekt, ale obecně jak by toto mohlo fungovat

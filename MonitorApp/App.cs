@@ -11,8 +11,8 @@ namespace MonitorApp;
 public class App
 {
     private Config? config;
-    private List<ConnectionService> connections = new();
-    private List<NotificationService> notifications = new();
+    private List<IConnectionService> connections = new();
+    private List<INotificationService> notifications = new();
 
     public async Task Run(string singleQueryName = "")
     {
@@ -43,8 +43,8 @@ public class App
 
     private async Task RunQuery(DbQueryDto q)
     {
-        ConnectionService? c = connections.FirstOrDefault(c => c.name == q.ConnectionDto.name);
-        List<NotificationService> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.Name)).ToList();
+        IConnectionService? c = connections.FirstOrDefault(c => c.Name == q.ConnectionDto.name);
+        List<INotificationService> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.Name)).ToList();
         if (c == null)
         {
             Console.WriteLine($"Connection {q.ConnectionDto.name} not found for query {q.name}");
@@ -61,7 +61,7 @@ public class App
         {
             try
             {
-                foreach (NotificationService n in ns)
+                foreach (INotificationService n in ns)
                 {
                     await n.Notify(q.notificationText);
                 }
@@ -74,22 +74,22 @@ public class App
         } 
     }
     
-    private void LoadConnections(List<ConnectionService> connections)
+    private void LoadConnections(List<IConnectionService> connections)
     {
         foreach (ConnectionDTO connection in config.Connections)
         {
             if (connection is SqlConnectionDto sqlConnectionDto)
             {
-                connections.Add(new SQLConnectionService(sqlConnectionDto.connectionString) { name = connection.name });
+                connections.Add(new SQLConnectionService(sqlConnectionDto.connectionString) { Name = connection.name });
             }
             else if (connection is EsConnectionDto esConnectionDto)
             {
-                connections.Add(new ESConnectionService(esConnectionDto) { name = connection.name });
+                connections.Add(new ESConnectionService(esConnectionDto) { Name = connection.name });
             }
         }
     }
 
-    private void LoadNotifications(List<NotificationService> notifications)
+    private void LoadNotifications(List<INotificationService> notifications)
     {
         JsonApiSenderService jas = new(new HttpClient());
         foreach (NotificationDto notification in config.Notifications)
