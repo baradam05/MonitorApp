@@ -1,8 +1,6 @@
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using MonitorApp.JsonParsing.DTO;
 using MonitorApp.JsonParsing.DTO.Connections;
-using MonitorApp.JsonParsing.DTO.Notifications;
 using MonitorApp.JsonParsing.DTO.Queries;
 
 namespace MonitorApp.JsonParsing;
@@ -47,112 +45,121 @@ public static class JsonParser
             return null;
         }
 
-        if (dto.Notifications == null || dto.Notifications.Count == 0)
-        {
-            Console.WriteLine($"Notifications are required in config file.");
-            return null;
-        }
-
-        foreach (NotificationDto notif in dto.Notifications)
-        {
-            if(notif is EmailNotificationDto email)
-            if(int.TryParse(email.smtpPort, out int port) == false)
-            {
-                Console.WriteLine($"Invalid SMTP port for notification '{email.name}': {email.smtpPort}");
-                return null;
-            }
-        }
-        
-        Config config = new();
-        config.Connections = dto.Connections;
-        config.Notifications = dto.Notifications;
-        config.QueriesObjects = new();
-        
-        foreach(QueryDTO selectDTO in dto.Queries)
-        {
-            if (selectDTO is DbQueryStringDto dbDTO)
-            {
-                DbQueryDto? query = DTOToSelect(dbDTO, config);
-                if (query == null)
-                    return null;
-                
-                config.QueriesObjects.Add(query);
-            }
-            else if (selectDTO is InFileDTO inFile)
-            {
-                List <DbQueryStringDto>? selectsFromFile = LoadSelectsFromFile(inFile.path);
-                if(selectsFromFile == null)
-                    return null;
-                foreach (DbQueryStringDto inFileSelect in selectsFromFile)
-                {
-                    DbQueryDto? query = DTOToSelect(inFileSelect, config);
-                    if (query == null)
-                        return null;
-                    config.QueriesObjects.Add(query);
-                }
-            }
-        }
-
-        if (config.QueriesObjects == null || config.QueriesObjects.Count == 0)
+        if (dto.Queries == null || dto.Queries.Count == 0)
         {
             Console.WriteLine($"Queries are required in config file.");
             return null;
         }
         
-        return config;
+        Config resolvedConfig = new();
+        resolvedConfig.Connections = dto.Connections;
+        resolvedConfig.QueriesObjects = new();
+        
+        foreach(QueryDTO queryDto in dto.Queries)
+        {
+            if (queryDto is InFileDTO inFile)
+            {
+                List <QueryDTO>? queriesFromFile = LoadQueriesFromFile(inFile.path);
+                if(queriesFromFile == null)
+                    return null;
+                foreach (QueryDTO queryFromFile in queriesFromFile)
+                {
+                    QueryDTO? resolvedQuery = ResolveQuery(queryFromFile, resolvedConfig.Connections);
+                    if (resolvedQuery == null)
+                        return null; 
+                    resolvedConfig.QueriesObjects.Add(resolvedQuery);
+                }
+            }
+            else
+            {
+                QueryDTO? resolvedQuery = ResolveQuery(queryDto, resolvedConfig.Connections);
+                if (resolvedQuery == null)
+                    return null;
+                resolvedConfig.QueriesObjects.Add(resolvedQuery);
+            }
+        }
+
+        if (resolvedConfig.QueriesObjects.Count == 0)
+        {
+            Console.WriteLine($"No valid queries were loaded.");
+            return null;
+        }
+        
+        return resolvedConfig;
     }
 
-    private static List<DbQueryStringDto>? LoadSelectsFromFile(string filePath)
+    private static List<QueryDTO>? LoadQueriesFromFile(string file)
     {
-        filePath = Path.Combine(AppContext.BaseDirectory, "_Config", filePath);
-        if (!File.Exists(filePath))
+        string fullPath = Path.Combine(AppContext.BaseDirectory, "_Config", file);
+        if (!File.Exists(fullPath))
         {
-            Console.WriteLine($"File not found:\n\"{filePath}\"");
+            Console.WriteLine($"File not found:\n\"{fullPath}\"");
             return null;
         }
 
         try
         {
-            string json = File.ReadAllText(filePath);
-            List<DbQueryStringDto>? selects = JsonSerializer.Deserialize<List<DbQueryStringDto>>(json, new JsonSerializerOptions
+            string json = File.ReadAllText(fullPath);
+            return JsonSerializer.Deserialize<List<QueryDTO>>(json, new JsonSerializerOptions
             {
                 IncludeFields = true
             });
-        
-            return selects;
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Failed to load or parse selects file\n\"{filePath}\": \n\n" + e.Message);
+            Console.WriteLine($"Failed to load or parse queries file\n\"{fullPath}\": \n\n" + e.Message);
             return null;
         }
-        
     }
     
-    private static DbQueryDto? DTOToSelect(DbQueryStringDto dbStringDto, Config config)
+    private static QueryDTO? ResolveQuery(QueryDTO query, List<ConnectionDTO> connections)
     {
-        ConnectionDTO? c = config.Connections.FirstOrDefault(c => c.name == dbStringDto.connection);
-        List<NotificationDto> ns = config.Notifications.Where(n => dbStringDto.notifications.Contains(n.name)).ToList();
-
-        if (c == null)
+        if (query is SqlQueryStringDto sqlStringDto)
         {
-            Console.WriteLine("Connection not found: " + dbStringDto.connection);
-            return null;
-        }
-        else if (ns.Count == 0)
-        {
-            Console.WriteLine("Notifications not found: " + dbStringDto.connection);
-            return null;
+            ConnectionDTO? c = connections.FirstOrDefault(c => c.name == sqlStringDto.connection);
+            if (c == null)
+            {
+                Console.WriteLine($"Connection '{sqlStringDto.connection}' not found for query '{sqlStringDto.name}'.");
+                return null;
+            }
+            
+            return new SqlQueryDto
+            {
+                name = sqlStringDto.name,
+                ConnectionDto = c,
+                queryText = sqlStringDto.queryText,
+                notificationText = sqlStringDto.notificationText,
+                notifications = sqlStringDto.notifications
+            };
         }
         
-        return new DbQueryDto
+        if (query is EsQueryStringDto esStringDto)
         {
-            name = dbStringDto.name,
-            ConnectionDto = c,
-            queryText = dbStringDto.queryText,
-            queryLang = dbStringDto.queryLang,
-            notificationText = dbStringDto.notificationText,
-            notifications = ns
-        };
+            ConnectionDTO? c = connections.FirstOrDefault(c => c.name == esStringDto.connection);
+            if (c == null)
+            {
+                Console.WriteLine($"Connection '{esStringDto.connection}' not found for query '{esStringDto.name}'.");
+                return null;
+            }
+
+            if (esStringDto.queryLang == null && esStringDto.index == null)
+            {
+                Console.WriteLine($"Query '{esStringDto.name}' must have default index if not using SQL format");
+                return null;
+            }
+            
+            return new EsQueryDto
+            {
+                name = esStringDto.name,
+                ConnectionDto = c,
+                queryText = esStringDto.queryText,
+                index = esStringDto.index,
+                notificationText = esStringDto.notificationText,
+                notifications = esStringDto.notifications
+            };
+        }
+
+        Console.WriteLine($"Unknown query type for query named '{query.name}'.");
+        return null;
     }
 }

@@ -9,31 +9,44 @@ namespace MonitorApp.ConnectionServices;
 public class ESConnectionService : IConnectionService
 {
     private readonly ElasticClient client;
-    public string Name { get; set; }
+    public string name { get; set; }
 
     public ESConnectionService(EsConnectionDto esc)
     {
-        ConnectionSettings settings = new ConnectionSettings(new Uri(esc.uri))
-            .BasicAuthentication(esc.username, esc.password)
-            .DefaultIndex(esc.defaultIndex);
+        ConnectionSettings settings = (esc.username == null || esc.password == null) ?
+            new ConnectionSettings(new Uri(esc.uri)) :
+            new ConnectionSettings(new Uri(esc.uri)).BasicAuthentication(esc.username, esc.password);
 
         client = new ElasticClient(settings);
     }
 
-    public bool ExecuteQuery(DbQueryDto query)
+    public bool ExecuteQuery(QueryDTO query)
     {
-        if (query.queryLang == "sql")
+        if (query is not EsQueryDto esQuery)
         {
-            QuerySqlResponse response = client.Sql.Query(q => q.Query(query.queryText));
+            Console.WriteLine($"Error: ESConnectionService received a non-ES query named '{query.name}'.");
+            return false;
+        }
+
+        // Handle SQL-style queries
+        if (esQuery.queryLang == "sql")
+        {
+            QuerySqlResponse response = client.Sql.Query(q => q.Query(esQuery.queryText));
             return response.IsValid && response.Rows.Any();
         }
-        
-        string defaultIndex = client.ConnectionSettings.DefaultIndex;
-        StringResponse jsonQueryResponse = client.LowLevel.Search<StringResponse>(defaultIndex, query.queryText);
+
+        // Handle native JSON queries
+        if (string.IsNullOrEmpty(esQuery.index))
+        {
+            Console.WriteLine($"Error: No index specified for ES JSON query '{esQuery.name}'.");
+            return false;
+        }
+
+        StringResponse jsonQueryResponse = client.LowLevel.Search<StringResponse>(esQuery.index, esQuery.queryText);
 
         if (!jsonQueryResponse.Success)
         {
-            Console.WriteLine($"Error executing query {query.name}:\n\n {jsonQueryResponse.DebugInformation}");
+            Console.WriteLine($"Error executing ES JSON query {esQuery.name}:\n\n {jsonQueryResponse.DebugInformation}");
             return false;
         }
 
@@ -59,7 +72,7 @@ public class ESConnectionService : IConnectionService
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"Error parsing Elasticsearch response for query '{query.name}'\n\n: {ex.Message}");
+            Console.WriteLine($"Error parsing Elasticsearch response for query '{esQuery.name}'\n\n: {ex.Message}");
             return false;
         }
 

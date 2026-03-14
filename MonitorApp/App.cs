@@ -12,7 +12,6 @@ public class App
 {
     private Config? config;
     private List<IConnectionService> connections = new();
-    private List<INotificationService> notifications = new();
 
     public async Task Run(string singleQueryName = "")
     {
@@ -21,55 +20,73 @@ public class App
             return;
 
         LoadConnections(connections);
-        LoadNotifications(notifications);
         
-        if(singleQueryName != "")
+        List<QueryDTO> queriesToRun = config.QueriesObjects;
+
+        if(!string.IsNullOrEmpty(singleQueryName))
         {
-            List<DbQueryDto> q = config.QueriesObjects.Where(q => q.name == singleQueryName).ToList();
-            if (q.Count == 0)
+            queriesToRun = config.QueriesObjects.Where(q => q.name == singleQueryName).ToList();
+            if (queriesToRun.Count == 0)
             {
                 Console.WriteLine($"Query with name '{singleQueryName}' not found.");
                 return;
             }
-
-            config.QueriesObjects = q;
         }
         
-        foreach (DbQueryDto q in config.QueriesObjects)
+        foreach (QueryDTO q in queriesToRun)
         {
             await RunQuery(q);
         }
     }
 
-    private async Task RunQuery(DbQueryDto q)
+    private async Task RunQuery(QueryDTO q)
     {
-        IConnectionService? c = connections.FirstOrDefault(c => c.Name == q.ConnectionDto.name);
-        List<INotificationService> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.Name)).ToList();
+        // 1. Find Connection
+        ConnectionDTO? connectionDto = null;
+        if (q is SqlQueryDto sqlQuery)
+        {
+            connectionDto = sqlQuery.ConnectionDto;
+        }
+        else if (q is EsQueryDto esQuery)
+        {
+            connectionDto = esQuery.ConnectionDto;
+        }
+
+        if (connectionDto == null)
+        {
+            Console.WriteLine($"Could not determine connection for query '{q.name}'.");
+            return;
+        }
+
+        IConnectionService? c = connections.FirstOrDefault(c => c.name == connectionDto.name);
         if (c == null)
         {
-            Console.WriteLine($"Connection {q.ConnectionDto.name} not found for query {q.name}");
+            Console.WriteLine($"Connection '{connectionDto.name}' not found for query '{q.name}'.");
             return;
         }
 
-        if (ns.Count == 0)
-        {
-            Console.WriteLine($"No notifications found for query {q.name}");
-            return;
-        }
-
+        // 2. Execute Query
         if (c.ExecuteQuery(q))
         {
-            try
+            // 3. Create Notification Services and Notify
+            if (q.notifications == null || q.notifications.Count == 0)
             {
-                foreach (INotificationService n in ns)
+                Console.WriteLine($"Query '{q.name}' succeeded but has no notifications defined.");
+                return;
+            }
+
+            List<INotificationService> notificationServices = CreateNotificationServices(q.notifications);
+
+            foreach (INotificationService n in notificationServices)
+            {
+                try
                 {
                     await n.Notify(q.notificationText);
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"An error occurred while sending a notification for query '{q.name}'. Processing will continue.\n\n {e.Message}");
-                Console.WriteLine();
+                catch (Exception e)
+                {
+                    Console.WriteLine($"An error occurred while sending a notification via '{n.Name}' for query '{q.name}'. Processing will continue.\n\n {e.Message}");
+                }
             }
         } 
     }
@@ -80,32 +97,35 @@ public class App
         {
             if (connection is SqlConnectionDto sqlConnectionDto)
             {
-                connections.Add(new SQLConnectionService(sqlConnectionDto.connectionString) { Name = connection.name });
+                connections.Add(new SQLConnectionService(sqlConnectionDto.connectionString) { name = connection.name });
             }
             else if (connection is EsConnectionDto esConnectionDto)
             {
-                connections.Add(new ESConnectionService(esConnectionDto) { Name = connection.name });
+                connections.Add(new ESConnectionService(esConnectionDto) { name = connection.name });
             }
         }
     }
 
-    private void LoadNotifications(List<INotificationService> notifications)
+    private List<INotificationService> CreateNotificationServices(List<NotificationDto> notificationDtos)
     {
-        JsonApiSenderService jas = new(new HttpClient());
-        foreach (NotificationDto notification in config.Notifications)
+        var services = new List<INotificationService>();
+        var jas = new JsonApiSenderService(new HttpClient()); // Create one instance to share
+
+        foreach (NotificationDto notification in notificationDtos)
         {
-            if (notification is EmailNotificationDto emailNotificationDto)
+            if (notification is EmailNotificationDto emailDto)
             {
-                notifications.Add(new EmailNotificationService(emailNotificationDto) { Name = notification.name });
+                services.Add(new EmailNotificationService(emailDto) { Name = notification.name });
             }
-            else if (notification is SmsNotificationDto smsNotificationDto)
+            else if (notification is SmsNotificationDto smsDto)
             {
-                notifications.Add(new SmsNotificationService(smsNotificationDto,jas) { Name = notification.name });
+                services.Add(new SmsNotificationService(smsDto, jas) { Name = notification.name });
             }
-            else if (notification is TeamsNotificationsDto teamsNotificationDto)
+            else if (notification is TeamsNotificationsDto teamsDto)
             {
-                notifications.Add(new TeamsNotificationService(teamsNotificationDto,jas) { Name = notification.name });
+                services.Add(new TeamsNotificationService(teamsDto, jas) { Name = notification.name });
             }
         }
+        return services;
     }
 }
