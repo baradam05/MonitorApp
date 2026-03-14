@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MonitorApp.JsonParsing.Help_classes;
+namespace MonitorApp.JsonParsing.DTO.Notifications;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(EmailNotificationDto), "email")]

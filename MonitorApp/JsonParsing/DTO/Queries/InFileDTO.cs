@@ -1,4 +1,4 @@
-namespace MonitorApp.JsonParsing.Help_classes;
+namespace MonitorApp.JsonParsing.DTO.Queries;
 
 public class InFileDTO : QueryDTO
 {

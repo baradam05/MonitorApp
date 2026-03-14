@@ -1,4 +1,8 @@
-namespace MonitorApp.JsonParsing.Help_classes;
+using MonitorApp.JsonParsing.DTO.Connections;
+using MonitorApp.JsonParsing.DTO.Notifications;
+using MonitorApp.JsonParsing.DTO.Queries;
+
+namespace MonitorApp.JsonParsing.DTO;
 
 public class Config
 {

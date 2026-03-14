@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MonitorApp.JsonParsing.Help_classes;
+namespace MonitorApp.JsonParsing.DTO.Queries;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(DbQueryStringDto), "query")]

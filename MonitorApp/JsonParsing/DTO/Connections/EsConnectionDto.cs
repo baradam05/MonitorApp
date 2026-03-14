@@ -1,4 +1,4 @@
-namespace MonitorApp.JsonParsing.Help_classes;
+namespace MonitorApp.JsonParsing.DTO.Connections;
 
 public class EsConnectionDto : ConnectionDTO
 {

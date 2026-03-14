@@ -1,19 +1,18 @@
-using System.Globalization;
-using Elasticsearch.Net;
 using MonitorApp.JsonParsing;
-using MonitorApp.JsonParsing.Help_classes;
-using MonitorApp.Notifications;
-using Notification = MonitorApp.Notifications.Notification;
+using MonitorApp.JsonParsing.DTO;
+using MonitorApp.JsonParsing.DTO.Connections;
+using MonitorApp.JsonParsing.DTO.Notifications;
+using MonitorApp.JsonParsing.DTO.Queries;
+using MonitorApp.ConnectionServices;
+using MonitorApp.NotificationServices;
 
 namespace MonitorApp;
-
-using Connection = Queries.Connection;
 
 public class App
 {
     private Config? config;
-    private List<Connection> connections = new();
-    private List<Notification> notifications = new();
+    private List<ConnectionService> connections = new();
+    private List<NotificationService> notifications = new();
 
     public async Task Run(string singleQueryName = "")
     {
@@ -44,8 +43,8 @@ public class App
 
     private async Task RunQuery(DbQueryDto q)
     {
-        Connection? c = connections.FirstOrDefault(c => c.Name == q.ConnectionDto.name);
-        List<Notification> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.Name)).ToList();
+        ConnectionService? c = connections.FirstOrDefault(c => c.name == q.ConnectionDto.name);
+        List<NotificationService> ns = notifications.Where(n => q.notifications.Any(n2 => n2.name == n.Name)).ToList();
         if (c == null)
         {
             Console.WriteLine($"Connection {q.ConnectionDto.name} not found for query {q.name}");
@@ -62,7 +61,7 @@ public class App
         {
             try
             {
-                foreach (Notification n in ns)
+                foreach (NotificationService n in ns)
                 {
                     await n.Notify(q.notificationText);
                 }
@@ -75,37 +74,37 @@ public class App
         } 
     }
     
-    private void LoadConnections(List<Queries.Connection> connections)
+    private void LoadConnections(List<ConnectionService> connections)
     {
         foreach (ConnectionDTO connection in config.Connections)
         {
             if (connection is SqlConnectionDto sqlConnectionDto)
             {
-                connections.Add(new SQLConnection(sqlConnectionDto.connectionString) { Name = connection.name });
+                connections.Add(new SQLConnectionService(sqlConnectionDto.connectionString) { name = connection.name });
             }
             else if (connection is EsConnectionDto esConnectionDto)
             {
-                connections.Add(new ESConnection(esConnectionDto) { Name = connection.name });
+                connections.Add(new ESConnectionService(esConnectionDto) { name = connection.name });
             }
         }
     }
 
-    private void LoadNotifications(List<Notification> notifications)
+    private void LoadNotifications(List<NotificationService> notifications)
     {
-        JsonApiSender jas = new(new HttpClient());
-        foreach (JsonParsing.Help_classes.NotificationDto notification in config.Notifications)
+        JsonApiSenderService jas = new(new HttpClient());
+        foreach (NotificationDto notification in config.Notifications)
         {
             if (notification is EmailNotificationDto emailNotificationDto)
             {
-                notifications.Add(new EmailNotification(emailNotificationDto) { Name = notification.name });
+                notifications.Add(new EmailNotificationService(emailNotificationDto) { Name = notification.name });
             }
             else if (notification is SmsNotificationDto smsNotificationDto)
             {
-                notifications.Add(new SMSNotification(smsNotificationDto,jas) { Name = notification.name });
+                notifications.Add(new SmsNotificationService(smsNotificationDto,jas) { Name = notification.name });
             }
             else if (notification is TeamsNotificationsDto teamsNotificationDto)
             {
-                notifications.Add(new TeamsNotification(teamsNotificationDto,jas) { Name = notification.name });
+                notifications.Add(new TeamsNotificationService(teamsNotificationDto,jas) { Name = notification.name });
             }
         }
     }

@@ -1,4 +1,7 @@
-namespace MonitorApp.JsonParsing.Help_classes;
+using MonitorApp.JsonParsing.DTO.Connections;
+using MonitorApp.JsonParsing.DTO.Notifications;
+
+namespace MonitorApp.JsonParsing.DTO.Queries;
 
 public class DbQueryDto : QueryDTO
 {
