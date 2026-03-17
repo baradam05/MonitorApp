@@ -13,13 +13,16 @@ public class SQLConnectionService : IConnectionService
         this.connectionString = connectionString;
     }
 
-    public bool ExecuteQuery(QueryDTO query)
+    public QueryResult ExecuteQuery(QueryDTO query)
     {
         if (query is not SqlQueryDto sqlQuery)
         {
             Console.WriteLine($"Error: SQLConnectionService received a non-SQL query named '{query.name}'.");
-            return false;
+            return new QueryResult { HasResults = false };
         }
+
+        var result = new QueryResult();
+        var data = new List<Dictionary<string, object>>();
 
         using (SqlConnection connection = new(connectionString))
         using (SqlCommand command = new SqlCommand(sqlQuery.queryText, connection))
@@ -28,13 +31,26 @@ public class SQLConnectionService : IConnectionService
             {
                 connection.Open();
                 using (SqlDataReader reader = command.ExecuteReader())
-                    return reader.HasRows;
+                {
+                    result.HasResults = reader.HasRows;
+                    while (reader.Read())
+                    {
+                        var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                        for (var i = 0; i < reader.FieldCount; i++)
+                        {
+                            row[reader.GetName(i)] = reader.GetValue(i);
+                        }
+                        data.Add(row);
+                    }
+                }
+                result.Data = data;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error executing query {sqlQuery.name}:\n\n {ex.Message}");
-                return false;
+                result.HasResults = false;
             }
         }
+        return result;
     }
 }

@@ -18,13 +18,14 @@ public static class JsonParser
             return null;
         }
         if (config != null)
-            return config;
+            return config;  
 
         try
         {
             string json = File.ReadAllText(filePath);
             Config? configDTO = JsonSerializer.Deserialize<Config>(json, new JsonSerializerOptions
             {
+                PropertyNameCaseInsensitive = true,
                 IncludeFields = true
             });
             

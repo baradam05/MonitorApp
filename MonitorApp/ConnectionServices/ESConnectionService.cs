@@ -1,3 +1,6 @@
+using System; 
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Elasticsearch.Net;
 using MonitorApp.JsonParsing.DTO.Connections;
@@ -20,62 +23,106 @@ public class ESConnectionService : IConnectionService
         client = new ElasticClient(settings);
     }
 
-    public bool ExecuteQuery(QueryDTO query)
+    public QueryResult ExecuteQuery(QueryDTO query)
     {
         if (query is not EsQueryDto esQuery)
         {
             Console.WriteLine($"Error: ESConnectionService received a non-ES query named '{query.name}'.");
-            return false;
+            return new QueryResult { HasResults = false };
         }
 
-        // Handle SQL-style queries
         if (esQuery.queryLang == "sql")
         {
-            QuerySqlResponse response = client.Sql.Query(q => q.Query(esQuery.queryText));
-            return response.IsValid && response.Rows.Any();
+            var response = client.Sql.Query(q => q.Query(esQuery.queryText));
+            var data = new List<Dictionary<string, object>>();
+
+            if (response.IsValid && response.Rows.Any())
+            {
+                var columns = response.Columns.Select(c => c.Name).ToList();
+                foreach (var row in response.Rows)
+                {
+                    var rowData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    for (int i = 0; i < columns.Count; i++)
+                    {
+                        // Convert SqlValue to a standard C# object using System.Text.Json
+                        var jsonValue = JsonSerializer.Serialize(row[i]);
+                        var value = JsonSerializer.Deserialize<JsonElement>(jsonValue);
+                        rowData[columns[i]] = GetValueFromJsonElement(value);
+                    }
+                    data.Add(rowData);
+                }
+            }
+
+            return new QueryResult
+            {
+                HasResults = data.Any(),
+                Data = data
+            };
         }
 
-        // Handle native JSON queries
         if (string.IsNullOrEmpty(esQuery.index))
         {
             Console.WriteLine($"Error: No index specified for ES JSON query '{esQuery.name}'.");
-            return false;
+            return new QueryResult { HasResults = false };
         }
 
-        StringResponse jsonQueryResponse = client.LowLevel.Search<StringResponse>(esQuery.index, esQuery.queryText);
+        var jsonResponse = client.LowLevel.Search<StringResponse>(esQuery.index, esQuery.queryText);
 
-        if (!jsonQueryResponse.Success)
+        if (!jsonResponse.Success)
         {
-            Console.WriteLine($"Error executing ES JSON query {esQuery.name}:\n\n {jsonQueryResponse.DebugInformation}");
-            return false;
+            Console.WriteLine($"Error executing ES JSON query {esQuery.name}:\n\n {jsonResponse.DebugInformation}");
+            return new QueryResult { HasResults = false };
         }
 
         try
         {
-            using (JsonDocument doc = JsonDocument.Parse(jsonQueryResponse.Body))
+            var data = new List<Dictionary<string, object>>();
+            using (var jsonDoc = JsonDocument.Parse(jsonResponse.Body))
             {
-                JsonElement root = doc.RootElement;
-                if (root.TryGetProperty("hits", out JsonElement hitsElement))
+                if (jsonDoc.RootElement.TryGetProperty("hits", out var hitsElement) &&
+                    hitsElement.TryGetProperty("hits", out var innerHits))
                 {
-                    if (hitsElement.TryGetProperty("total", out JsonElement totalElement))
+                    foreach (var hit in innerHits.EnumerateArray())
                     {
-                        if (totalElement.TryGetProperty("value", out JsonElement valueElement))
+                        if (hit.TryGetProperty("_source", out var sourceElement))
                         {
-                            if (valueElement.TryGetInt32(out int totalValue) && totalValue > 0)
+                            var row = JsonSerializer.Deserialize<Dictionary<string, object>>(sourceElement.GetRawText());
+                            if (row != null)
                             {
-                                return true;
+                                data.Add(row);
                             }
                         }
                     }
                 }
             }
+            return new QueryResult { HasResults = data.Any(), Data = data };
         }
         catch (JsonException ex)
         {
             Console.WriteLine($"Error parsing Elasticsearch response for query '{esQuery.name}'\n\n: {ex.Message}");
-            return false;
+            return new QueryResult { HasResults = false };
         }
-
-        return false;
+    }
+     private object GetValueFromJsonElement(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                return element.GetString();
+            case JsonValueKind.Number:
+                if (element.TryGetInt64(out long l))
+                {
+                    return l;
+                }
+                return element.GetDouble();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            case JsonValueKind.Null:
+                return null;
+            default:
+                return element.ToString();
+        }
     }
 }

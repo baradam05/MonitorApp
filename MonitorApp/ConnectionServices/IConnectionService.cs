@@ -5,5 +5,5 @@ namespace MonitorApp.ConnectionServices;
 public interface IConnectionService
 {
     string name { get; set; }
-    bool ExecuteQuery(QueryDTO query);
+    QueryResult ExecuteQuery(QueryDTO query);
 }

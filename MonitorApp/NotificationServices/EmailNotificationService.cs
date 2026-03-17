@@ -7,12 +7,12 @@ namespace MonitorApp.NotificationServices;
 public class EmailNotificationService : INotificationService
 {
     private readonly EmailNotificationDto config;
-    public string Name { get; set; }
+    public string name { get; set; }
 
     public EmailNotificationService(EmailNotificationDto notificationDto)
     {
         config = notificationDto;
-        Name = notificationDto.name;
+        name = notificationDto.name;
     }
 
     public async Task Notify(string message)
@@ -21,7 +21,7 @@ public class EmailNotificationService : INotificationService
         {
             if (!int.TryParse(config.smtpPort, out int port))
             {
-                Console.WriteLine($"Error: Invalid SMTP port configured for notification '{Name}': {config.smtpPort}");
+                Console.WriteLine($"Error: Invalid SMTP port configured for notification '{name}': {config.smtpPort}");
                 return;
             }
 
@@ -31,12 +31,14 @@ public class EmailNotificationService : INotificationService
                 EnableSsl = Convert.ToBoolean(config.useSsl)
             };
 
+            bool isHtml = message.TrimStart().StartsWith("<html>", StringComparison.OrdinalIgnoreCase);
+
             using MailMessage mailMessage = new()
             {
                 From = new MailAddress(config.fromEmail),
                 Subject = config.subject,
                 Body = message,
-                IsBodyHtml = false
+                IsBodyHtml = isHtml
             };
 
             mailMessage.To.Add(config.toEmail);
@@ -45,11 +47,11 @@ public class EmailNotificationService : INotificationService
         }
         catch (SmtpException ex)
         {
-            Console.WriteLine($"Error sending email for notification '{Name}'. Please check your SMTP settings:\n\n {ex.Message}");
+            Console.WriteLine($"Error sending email for notification '{name}'. Please check your SMTP settings:\n\n {ex.Message}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An unexpected error occurred while sending email for notification '{Name}':\n\n {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while sending email for notification '{name}':\n\n {ex.Message}");
         }
     }
 }

@@ -6,13 +6,13 @@ public class TeamsNotificationService : INotificationService
 {
     private readonly TeamsNotificationsDto config;
     private readonly JsonApiSenderService sender;
-    public string Name { get; set; }
+    public string name { get; set; }
 
     public TeamsNotificationService(TeamsNotificationsDto config, JsonApiSenderService sender)
     {
         this.config = config;
         this.sender = sender;
-        Name = config.name;
+        name = config.name;
     }
 
     public async Task Notify(string message)
@@ -49,7 +49,7 @@ public class TeamsNotificationService : INotificationService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An unexpected error occurred while sending Teams notification for '{Name}':\n\n {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while sending Teams notification for '{name}':\n\n {ex.Message}");
         }
     }
 }

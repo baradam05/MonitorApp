@@ -9,14 +9,14 @@ public class SmsNotificationService : INotificationService
     private readonly HttpClient httpClient;
     private readonly SmsNotificationDto config;
     private readonly JsonApiSenderService sender;
-    public string Name { get; set; }
+    public string name { get; set; }
 
     public SmsNotificationService(SmsNotificationDto config,JsonApiSenderService sender)
     {
         this.httpClient = new HttpClient();
         this.config = config;
         this.sender = sender;
-        Name = config.name;
+        name = config.name;
     }
     
     //REST API
@@ -35,7 +35,7 @@ public class SmsNotificationService : INotificationService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An unexpected error occurred while sending SMS notification for '{Name}':\n\n {ex.Message}");
+            Console.WriteLine($"An unexpected error occurred while sending SMS notification for '{name}':\n\n {ex.Message}");
         }
     }
     

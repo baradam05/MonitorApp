@@ -7,5 +7,5 @@ namespace MonitorApp.JsonParsing.DTO.Connections;
 [JsonDerivedType(typeof(EsConnectionDto), "elastic")]
 public abstract class ConnectionDTO
 {
-    public string name { get; set; }
+    public string name { get; set; }    
 }

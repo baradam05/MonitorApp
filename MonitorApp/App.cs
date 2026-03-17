@@ -5,6 +5,7 @@ using MonitorApp.JsonParsing.DTO.Notifications;
 using MonitorApp.JsonParsing.DTO.Queries;
 using MonitorApp.ConnectionServices;
 using MonitorApp.NotificationServices;
+using System.Text.RegularExpressions;
 
 namespace MonitorApp;
 
@@ -41,16 +42,12 @@ public class App
 
     private async Task RunQuery(QueryDTO q)
     {
-        // 1. Find Connection
-        ConnectionDTO? connectionDto = null;
-        if (q is SqlQueryDto sqlQuery)
+        ConnectionDTO? connectionDto = q switch
         {
-            connectionDto = sqlQuery.ConnectionDto;
-        }
-        else if (q is EsQueryDto esQuery)
-        {
-            connectionDto = esQuery.ConnectionDto;
-        }
+            SqlQueryDto sqlQuery => sqlQuery.ConnectionDto,
+            EsQueryDto esQuery => esQuery.ConnectionDto,
+            _ => null
+        };
 
         if (connectionDto == null)
         {
@@ -65,30 +62,56 @@ public class App
             return;
         }
 
-        // 2. Execute Query
-        if (c.ExecuteQuery(q))
+        QueryResult result = c.ExecuteQuery(q);
+
+        if (result.HasResults)
         {
-            // 3. Create Notification Services and Notify
-            if (q.notifications == null || q.notifications.Count == 0)
+            if (q.notifications == null || !q.notifications.Any())
             {
                 Console.WriteLine($"Query '{q.name}' succeeded but has no notifications defined.");
                 return;
             }
 
-            List<INotificationService> notificationServices = CreateNotificationServices(q.notifications);
+            string finalMessage;
+            string xmlLikePattern = @"<\s*(head|body|footer|group)";
 
-            foreach (INotificationService n in notificationServices)
+            if (!string.IsNullOrEmpty(q.notificationText) && Regex.IsMatch(q.notificationText, xmlLikePattern, RegexOptions.Singleline))
             {
                 try
                 {
-                    await n.Notify(q.notificationText);
+                    var generator = new MessageGenerator();
+                    finalMessage = generator.Generate(q.notificationText, result.Data);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error generating message from template for query '{q.name}': {ex.Message}");
+                    finalMessage = "Error: Failed to process notification template.";
+                }
+            }
+            else
+            {
+                finalMessage = q.notificationText;
+            }
+            
+            if (string.IsNullOrEmpty(finalMessage))
+            {
+                Console.WriteLine($"Warning: Generated message for query '{q.name}' is empty. Skipping notification.");
+                return;
+            }
+
+            List<INotificationService> notificationServices = CreateNotificationServices(q.notifications);
+            foreach (var n in notificationServices)
+            {
+                try
+                {
+                    await n.Notify(finalMessage);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"An error occurred while sending a notification via '{n.Name}' for query '{q.name}'. Processing will continue.\n\n {e.Message}");
+                    Console.WriteLine($"An error occurred while sending a notification via '{n.name}' for query '{q.name}'. Processing will continue.\n\n {e.Message}");
                 }
             }
-        } 
+        }
     }
     
     private void LoadConnections(List<IConnectionService> connections)
@@ -109,21 +132,21 @@ public class App
     private List<INotificationService> CreateNotificationServices(List<NotificationDto> notificationDtos)
     {
         var services = new List<INotificationService>();
-        var jas = new JsonApiSenderService(new HttpClient()); // Create one instance to share
+        var jas = new JsonApiSenderService(new HttpClient());
 
         foreach (NotificationDto notification in notificationDtos)
         {
             if (notification is EmailNotificationDto emailDto)
             {
-                services.Add(new EmailNotificationService(emailDto) { Name = notification.name });
+                services.Add(new EmailNotificationService(emailDto) { name = notification.name });
             }
             else if (notification is SmsNotificationDto smsDto)
             {
-                services.Add(new SmsNotificationService(smsDto, jas) { Name = notification.name });
+                services.Add(new SmsNotificationService(smsDto, jas) { name = notification.name });
             }
             else if (notification is TeamsNotificationsDto teamsDto)
             {
-                services.Add(new TeamsNotificationService(teamsDto, jas) { Name = notification.name });
+                services.Add(new TeamsNotificationService(teamsDto, jas) { name = notification.name });
             }
         }
         return services;
