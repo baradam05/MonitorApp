@@ -5,11 +5,17 @@ using MonitorApp.JsonParsing.DTO.Queries;
 
 namespace MonitorApp.JsonParsing;
 
+/// <summary>
+/// Loads and parses the application's configuration from JSON files.
+/// </summary>
 public static class JsonParser
 {
     private static string filePath = Path.Combine(AppContext.BaseDirectory, "_Config", "config.json");
     private static Config? config = null;
     
+    /// <summary>
+    /// Loads the main application configuration from the default config file path.
+    /// </summary>
     public static Config? Load()
     {
         if (!File.Exists(filePath))
@@ -38,6 +44,7 @@ public static class JsonParser
         }
     }
 
+    // Converts a raw Config DTO into a resolved Config object where connections are linked to queries.
     private static Config? DTOToConfig(Config dto)
     {
         if (dto.Connections == null || dto.Connections.Count == 0)
@@ -89,6 +96,7 @@ public static class JsonParser
         return resolvedConfig;
     }
 
+    // Loads a list of queries from an external JSON file.
     private static List<QueryDTO>? LoadQueriesFromFile(string file)
     {
         string fullPath = Path.Combine(AppContext.BaseDirectory, "_Config", file);
@@ -113,6 +121,7 @@ public static class JsonParser
         }
     }
     
+    // Resolves a raw query by linking it to its corresponding connection.
     private static QueryDTO? ResolveQuery(QueryDTO query, List<ConnectionDTO> connections)
     {
         if (query is SqlQueryStringDto sqlStringDto)
@@ -129,7 +138,6 @@ public static class JsonParser
                 name = sqlStringDto.name,
                 ConnectionDto = c,
                 queryText = sqlStringDto.queryText,
-                notificationText = sqlStringDto.notificationText,
                 notifications = sqlStringDto.notifications
             };
         }
@@ -143,9 +151,9 @@ public static class JsonParser
                 return null;
             }
 
-            if (esStringDto.queryLang == null && esStringDto.index == null)
+            if (!string.Equals(esStringDto.queryLang, "sql", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(esStringDto.index))
             {
-                Console.WriteLine($"Query '{esStringDto.name}' must have default index if not using SQL format");
+                Console.WriteLine($"Query '{esStringDto.name}' is not an SQL query and must have a default index specified.");
                 return null;
             }
             
@@ -155,8 +163,8 @@ public static class JsonParser
                 ConnectionDto = c,
                 queryText = esStringDto.queryText,
                 index = esStringDto.index,
-                notificationText = esStringDto.notificationText,
-                notifications = esStringDto.notifications
+                notifications = esStringDto.notifications,
+                queryLang = esStringDto.queryLang
             };
         }
 

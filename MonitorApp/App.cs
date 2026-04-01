@@ -4,16 +4,23 @@ using MonitorApp.JsonParsing.DTO.Connections;
 using MonitorApp.JsonParsing.DTO.Notifications;
 using MonitorApp.JsonParsing.DTO.Queries;
 using MonitorApp.ConnectionServices;
+using MonitorApp.MessageBuilders;
 using MonitorApp.NotificationServices;
 using System.Text.RegularExpressions;
 
 namespace MonitorApp;
 
+/// <summary>
+/// Main application class.
+/// </summary>
 public class App
 {
     private Config? config;
     private List<IConnectionService> connections = new();
 
+    /// <summary>
+    /// Runs the app, executing queries and dispatching notifications.
+    /// </summary>
     public async Task Run(string singleQueryName = "")
     {
         config = JsonParser.Load();
@@ -21,10 +28,10 @@ public class App
             return;
 
         LoadConnections(connections);
-        
+
         List<QueryDTO> queriesToRun = config.QueriesObjects;
 
-        if(!string.IsNullOrEmpty(singleQueryName))
+        if (!string.IsNullOrEmpty(singleQueryName))
         {
             queriesToRun = config.QueriesObjects.Where(q => q.name == singleQueryName).ToList();
             if (queriesToRun.Count == 0)
@@ -33,13 +40,14 @@ public class App
                 return;
             }
         }
-        
+
         foreach (QueryDTO q in queriesToRun)
         {
             await RunQuery(q);
         }
     }
 
+    // Executes a single query and sends notifications.
     private async Task RunQuery(QueryDTO q)
     {
         ConnectionDTO? connectionDto = q switch
@@ -62,7 +70,7 @@ public class App
             return;
         }
 
-        QueryResult result = c.ExecuteQuery(q);
+        QueryResult result = await c.ExecuteQuery(q);
 
         if (result.HasResults)
         {
@@ -72,38 +80,48 @@ public class App
                 return;
             }
 
-            string finalMessage;
-            string xmlLikePattern = @"<\s*(head|body|footer|group)";
-
-            if (!string.IsNullOrEmpty(q.notificationText) && Regex.IsMatch(q.notificationText, xmlLikePattern, RegexOptions.Singleline))
+            foreach (NotificationDto notification in q.notifications)
             {
+                MessageBuilder messageBuilder = new();
+                string finalMessage;
+
+                string? format = null;
+                IMessageRenderer? renderer = null;
+
+                if (notification is TeamsNotificationsDto teamsDto)
+                {
+                    format = teamsDto.Format;
+                    renderer = new MarkdownMessageRenderer();
+                }
+                else if (notification is EmailNotificationDto emailDto)
+                {
+                    format = emailDto.Format ?? "xml";
+                    renderer = new HtmlMessageRenderer();
+                }
+
+                Message message = messageBuilder.Build(result, notification.notificationText, format);
+
+                if (renderer != null)
+                {
+                    finalMessage = renderer.Render(message);
+                }
+                else
+                {
+                    finalMessage = message.Body;
+                }
+
+                if (string.IsNullOrEmpty(finalMessage))
+                {
+                    Console.WriteLine($"Warning: Generated message for query '{q.name}' is empty. Skipping notification.");
+                    continue;
+                }
+
+                List<INotificationService> services = CreateNotificationServices(new List<NotificationDto> { notification });
+                INotificationService n = services.First();
+
                 try
                 {
-                    var generator = new MessageGenerator();
-                    finalMessage = generator.Generate(q.notificationText, result.Data);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error generating message from template for query '{q.name}': {ex.Message}");
-                    finalMessage = "Error: Failed to process notification template.";
-                }
-            }
-            else
-            {
-                finalMessage = q.notificationText;
-            }
-            
-            if (string.IsNullOrEmpty(finalMessage))
-            {
-                Console.WriteLine($"Warning: Generated message for query '{q.name}' is empty. Skipping notification.");
-                return;
-            }
-
-            List<INotificationService> notificationServices = CreateNotificationServices(q.notifications);
-            foreach (var n in notificationServices)
-            {
-                try
-                {
+                    Console.WriteLine($"DEBUG: Query '{q.name}' is sending notification '{notification.name}' (Type: {notification.GetType().Name.Replace("NotificationDto", "")}).");
                     await n.Notify(finalMessage);
                 }
                 catch (Exception e)
@@ -113,7 +131,8 @@ public class App
             }
         }
     }
-    
+
+    // Initializes connection services based on the configuration.
     private void LoadConnections(List<IConnectionService> connections)
     {
         foreach (ConnectionDTO connection in config.Connections)
@@ -129,10 +148,11 @@ public class App
         }
     }
 
+    // Creates notification services.
     private List<INotificationService> CreateNotificationServices(List<NotificationDto> notificationDtos)
     {
-        var services = new List<INotificationService>();
-        var jas = new JsonApiSenderService(new HttpClient());
+        List<INotificationService> services = new();
+        JsonApiSenderService jas = new(new HttpClient());
 
         foreach (NotificationDto notification in notificationDtos)
         {

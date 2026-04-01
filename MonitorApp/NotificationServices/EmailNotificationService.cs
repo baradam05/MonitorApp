@@ -4,6 +4,9 @@ using MonitorApp.JsonParsing.DTO.Notifications;
 
 namespace MonitorApp.NotificationServices;
 
+/// <summary>
+/// Service for sending email notifications.
+/// </summary>
 public class EmailNotificationService : INotificationService
 {
     private readonly EmailNotificationDto config;
@@ -15,6 +18,9 @@ public class EmailNotificationService : INotificationService
         name = notificationDto.name;
     }
 
+    /// <summary>
+    /// Sends an email notification.
+    /// </summary>
     public async Task Notify(string message)
     {
         try
@@ -27,9 +33,13 @@ public class EmailNotificationService : INotificationService
 
             using SmtpClient smtpClient = new(config.smtpServer, port)
             {
-                Credentials = new NetworkCredential(config.username, config.password),
                 EnableSsl = Convert.ToBoolean(config.useSsl)
             };
+
+            if (!string.IsNullOrEmpty(config.username) && !string.IsNullOrEmpty(config.password))
+            {
+                smtpClient.Credentials = new NetworkCredential(config.username, config.password);
+            }
 
             bool isHtml = message.TrimStart().StartsWith("<html>", StringComparison.OrdinalIgnoreCase);
 

@@ -3,17 +3,23 @@ using MonitorApp.JsonParsing.DTO.Queries;
 
 namespace MonitorApp.ConnectionServices;
 
+/// <summary>
+/// Connection service for SQL databases.
+/// </summary>
 public class SQLConnectionService : IConnectionService
 {
     public string connectionString { get; set; }
     public string name { get; set; }
-    
+
     public SQLConnectionService(string connectionString)
     {
         this.connectionString = connectionString;
     }
 
-    public QueryResult ExecuteQuery(QueryDTO query)
+    /// <summary>
+    /// Executes a SQL query and returns the results.
+    /// </summary>
+    public async Task<QueryResult> ExecuteQuery(QueryDTO query)
     {
         if (query is not SqlQueryDto sqlQuery)
         {
@@ -21,22 +27,22 @@ public class SQLConnectionService : IConnectionService
             return new QueryResult { HasResults = false };
         }
 
-        var result = new QueryResult();
-        var data = new List<Dictionary<string, object>>();
+        QueryResult result = new();
+        List<Dictionary<string, object>> data = new();
 
         using (SqlConnection connection = new(connectionString))
         using (SqlCommand command = new SqlCommand(sqlQuery.queryText, connection))
         {
             try
             {
-                connection.Open();
-                using (SqlDataReader reader = command.ExecuteReader())
+                await connection.OpenAsync();
+                using (SqlDataReader reader = await command.ExecuteReaderAsync())
                 {
                     result.HasResults = reader.HasRows;
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
-                        var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                        for (var i = 0; i < reader.FieldCount; i++)
+                        Dictionary<string, object> row = new(StringComparer.OrdinalIgnoreCase);
+                        for (int i = 0; i < reader.FieldCount; i++)
                         {
                             row[reader.GetName(i)] = reader.GetValue(i);
                         }

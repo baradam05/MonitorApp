@@ -3,6 +3,9 @@ using System.Text.Json;
 
 namespace MonitorApp.NotificationServices;
 
+/// <summary>
+/// A service for sending JSON payloads to an API endpoint.
+/// </summary>
 public class JsonApiSenderService
 {
     private readonly HttpClient httpClient;
@@ -12,6 +15,9 @@ public class JsonApiSenderService
         this.httpClient = httpClient;
     }
 
+    /// <summary>
+    /// Sends a JSON payload to the specified URL via POST.
+    /// </summary>
     public async Task<string> PostJsonAsync(string url, object payload)
     {
         string json = JsonSerializer.Serialize(payload);

@@ -4,14 +4,18 @@ using MonitorApp.JsonParsing.DTO.Notifications;
 
 namespace MonitorApp.NotificationServices;
 
+/// <summary>
+/// Sends SMS notifications via an external API.
+/// </summary>
 public class SmsNotificationService : INotificationService
 {
     private readonly HttpClient httpClient;
     private readonly SmsNotificationDto config;
     private readonly JsonApiSenderService sender;
+
     public string name { get; set; }
 
-    public SmsNotificationService(SmsNotificationDto config,JsonApiSenderService sender)
+    public SmsNotificationService(SmsNotificationDto config, JsonApiSenderService sender)
     {
         this.httpClient = new HttpClient();
         this.config = config;
@@ -19,7 +23,9 @@ public class SmsNotificationService : INotificationService
         name = config.name;
     }
     
-    //REST API
+    /// <summary>
+    /// Sends an SMS notification using a JSON payload.
+    /// </summary>
     public async Task Notify(string message)
     {
         try
@@ -39,7 +45,9 @@ public class SmsNotificationService : INotificationService
         }
     }
     
-    //HttpClient directly
+    /// <summary>
+    /// DEPRECATED: Sends an SMS notification using form-urlencoded content.
+    /// </summary>
     public async Task NotifyOLD(string message)
     {
         byte[] authBytes = Encoding.ASCII.GetBytes(
@@ -62,6 +70,4 @@ public class SmsNotificationService : INotificationService
         HttpResponseMessage response = await httpClient.PostAsync(config.apiUrl, content);
         response.EnsureSuccessStatusCode();
     }
-
-
 }

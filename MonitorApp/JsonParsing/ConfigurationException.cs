@@ -2,6 +2,9 @@ using System;
 
 namespace MonitorApp.JsonParsing
 {
+    /// <summary>
+    /// Represents errors that occur during configuration parsing.
+    /// </summary>
     public class ConfigurationException : Exception
     {
         public ConfigurationException(string message) : base(message) { }

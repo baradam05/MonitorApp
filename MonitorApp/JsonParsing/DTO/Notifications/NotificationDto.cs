@@ -9,4 +9,5 @@ namespace MonitorApp.JsonParsing.DTO.Notifications;
 public abstract class NotificationDto
 {
     public required string name { get; set; }
+    public required string notificationText { get; set; }
 }

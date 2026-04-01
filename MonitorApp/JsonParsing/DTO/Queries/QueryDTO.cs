@@ -11,6 +11,5 @@ namespace MonitorApp.JsonParsing.DTO.Queries;
 public abstract class QueryDTO
 {
     public required string name { get; set; }
-    public string notificationText { get; set; }
-    public List<NotificationDto> notifications { get; set; }
+    public List<NotificationDto> notifications { get; set; } = new();
 }
