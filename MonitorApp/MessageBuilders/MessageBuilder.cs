@@ -32,6 +32,9 @@ public class MessageBuilder
             return new Message();
         }
 
+        int globalCount = queryResult.Data.Count;
+        template = template.Replace("{global.count}", globalCount.ToString());
+
         string headerTemplate = string.Empty;
         string bodyContent = string.Empty;
         string footerTemplate = string.Empty;
@@ -140,6 +143,17 @@ public class MessageBuilder
                 return key == null ? null : row[key]?.ToString();
             }, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        // Inject group.count directly into the data rows for each group
+        foreach (System.Linq.IGrouping<string, Dictionary<string, object>> group in groupedData)
+        {
+            int groupCount = group.Count();
+            foreach (Dictionary<string, object> row in group)
+            {
+                // Add the count to each row in the group.
+                row["group.count"] = groupCount;
+            }
+        }
 
         StringBuilder bodyBuilder = new();
         foreach (System.Linq.IGrouping<string, Dictionary<string, object>> group in groupedData)
