@@ -1,0 +1,93 @@
+{
+  "Connections": [
+    {
+      "type": "elastic",
+      "name": "MockElastic",
+      "uri": "http://localhost:9200",
+      "username": "elastic",
+      "password": "changeme"
+    }
+  ],
+  "Queries": [
+    {
+      "type": "elastic",
+      "name": "ES_Email_Simple_HBF",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "email",
+          "name": "EmailSimpleHBF",
+          "smtpServer": "smtp.example.com",
+          "smtpPort": "587",
+          "fromEmail": "from@example.com",
+          "toEmail": "to@example.com",
+          "subject": "Simple HBF",
+          "format": "xml",
+          "notificationText": "<head><h1>This is a static header</h1></head><body>This is a static body, it will appear only once.</body><footer>This is a static footer.</footer>"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Email_Placeholders",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "email",
+          "name": "EmailPlaceholders",
+          "smtpServer": "smtp.example.com",
+          "smtpPort": "587",
+          "fromEmail": "from@example.com",
+          "toEmail": "to@example.com",
+          "subject": "Alert from ES",
+          "format": "xml",
+          "notificationText": "<body><p>Found an error for service {service.name} with message: {error.message}.</p></body>"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Email_Counters",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "email",
+          "name": "EmailCounters",
+          "smtpServer": "smtp.example.com",
+          "smtpPort": "587",
+          "fromEmail": "from@example.com",
+          "toEmail": "to@example.com",
+          "subject": "Total errors",
+          "format": "xml",
+          "notificationText": "<head><h1>Total errors: {global.count}</h1></head><body><p>Error message: {error.message}.</p></body>"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Email_Grouping",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "email",
+          "name": "EmailGrouping",
+          "smtpServer": "smtp.example.com",
+          "smtpPort": "587",
+          "fromEmail": "from@example.com",
+          "toEmail": "to@example.com",
+          "subject": "Grouped Errors",
+          "format": "xml",
+          "notificationText": "<head><h1>Grouped Error Report</h1></head><group by=\"service.name\"><header><h2>Service: {service.name} ({group.count} errors)</h2></header><item><p>- {error.message} at {@timestamp}</p></item><footer><hr></footer></group>"
+        }
+      ]
+    }
+  ]
+}

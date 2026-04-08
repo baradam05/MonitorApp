@@ -1,0 +1,102 @@
+{
+  "Connections": [
+    {
+      "type": "sql",
+      "name": "MockSqlServer",
+      "connectionString": "Server=localhost;Database=MockDB;User Id=sa;Password=Your_password123;TrustServerCertificate=True;"
+    },
+    {
+      "type": "elastic",
+      "name": "MockElastic",
+      "uri": "http://localhost:9200",
+      "username": "elastic",
+      "password": "changeme"
+    }
+  ],
+  "Queries": [
+    {
+      "type": "inFile",
+      "name": "LoadQueriesFromInFile",
+      "path": "MockInFile.json"
+    },
+    {
+      "type": "sql",
+      "name": "SQL_Plaintext_All_Notifications",
+      "connection": "MockSqlServer",
+      "queryText": "SELECT * FROM TABLE",
+      "notifications": [
+        {
+          "type": "email",
+          "name": "SqlEmailPlain",
+          "smtpServer": "smtp.example.com",
+          "smtpPort": "587",
+          "username": "user@example.com",
+          "password": "password",
+          "fromEmail": "from@example.com",
+          "toEmail": "to@example.com",
+          "subject": "SQL Alert",
+          "useSsl": "true",
+          "format": "plaintext",
+          "notificationText": "SQL Query returned: {Info} with severity {Severity}."
+        },
+        {
+          "type": "teams",
+          "name": "SqlTeamsPlain",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "plaintext",
+          "notificationText": "SQL Query returned: {Info} with severity {Severity}."
+        },
+        {
+          "type": "sms",
+          "name": "SqlSms",
+          "apiUrl": "https://api.sms_provider.com/send",
+          "accountSid": "ACxxxxxxxx",
+          "authToken": "xxxxxxxx",
+          "fromNumber": "+1234567890",
+          "toNumber": "+12345678901",
+          "notificationText": "SQL Alert: {Info} - {Severity}"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Plaintext_All_Notifications",
+      "connection": "MockElastic",
+      "index": "mock-index",
+      "queryText": "{\"query\":{\"match_all\":{}}}",
+      "notifications": [
+        {
+          "type": "email",
+          "name": "EsEmailPlain",
+          "smtpServer": "smtp.example.com",
+          "smtpPort": "587",
+          "username": "user@example.com",
+          "password": "password",
+          "fromEmail": "from@example.com",
+          "toEmail": "to@example.com",
+          "subject": "ES Alert",
+          "useSsl": "true",
+          "format": "plaintext",
+          "notificationText": "Elasticsearch query returned: {field1} with value {field2}."
+        },
+        {
+          "type": "teams",
+          "name": "EsTeamsPlain",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "plaintext",
+          "notificationText": "Elasticsearch query returned: {field1} with value {field2}."
+        },
+        {
+          "type": "sms",
+          "name": "EsSms",
+          "apiUrl": "https://api.sms_provider.com/send",
+          "accountSid": "ACxxxxxxxx",
+          "authToken": "xxxxxxxx",
+          "fromNumber": "+1234567890",
+          "toNumber": "+12345678901",
+          "notificationText": "ES Alert"
+        }
+      ]
+    }
+  ]
+}

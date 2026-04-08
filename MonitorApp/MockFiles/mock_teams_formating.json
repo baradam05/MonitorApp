@@ -1,0 +1,93 @@
+{
+  "Connections": [
+    {
+      "type": "elastic",
+      "name": "MockElastic",
+      "uri": "http://localhost:9200",
+      "username": "elastic",
+      "password": "changeme"
+    }
+  ],
+  "Queries": [
+    {
+      "type": "elastic",
+      "name": "ES_Teams_Raw_Markdown",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "teams",
+          "name": "TeamsRawMarkdown",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "markdown",
+          "notificationText": "## Error in {service.name}!\n\n**Message**: {error.message}\n\nThis will be repeated for every row."
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Teams_XML_Simple_HBF",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "teams",
+          "name": "TeamsSimpleHBF",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "xml",
+          "notificationText": "<head># Static Header</head><body>This is a static body, it will appear only once.</body><footer>--- Static Footer ---</footer>"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Teams_Placeholders",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "teams",
+          "name": "TeamsPlaceholders",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "xml",
+          "notificationText": "<body>## Alert for {service.name}\n\n**Message**: {error.message}</body>"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Teams_Counters",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "teams",
+          "name": "TeamsCounters",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "xml",
+          "notificationText": "<head># Total errors: {global.count}</head><body>- Error message: {error.message}</body>"
+        }
+      ]
+    },
+    {
+      "type": "elastic",
+      "name": "ES_Teams_Grouping",
+      "connection": "MockElastic",
+      "index": "logs",
+      "queryText": "{\"query\":{\"match\":{\"level\":\"error\"}}}",
+      "notifications": [
+        {
+          "type": "teams",
+          "name": "TeamsGrouping",
+          "webhookUrl": "https://outlook.office.com/webhook/...",
+          "format": "xml",
+          "notificationText": "<head># Grouped Error Report</head><group by=\"service.name\"><header>## Service: {service.name} ({group.count} errors)</header><item>- {error.message} at {@timestamp}</item><footer>---</footer></group>"
+        }
+      ]
+    }
+  ]
+}

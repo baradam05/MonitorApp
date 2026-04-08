@@ -1,0 +1,17 @@
+[
+  {
+    "type": "sql",
+    "name": "InFile_SQL_Query",
+    "connection": "MockSqlServer",
+    "queryText": "SELECT * FROM TABLE",
+    "notifications": [
+      {
+        "type": "teams",
+        "name": "InFileTeamsNotification",
+        "webhookUrl": "https://outlook.office.com/webhook/...",
+        "format": "markdown",
+        "notificationText": "Alert from InFile: **{ExternalData}**. Priority: *{Priority}*"
+      }
+    ]
+  }
+]

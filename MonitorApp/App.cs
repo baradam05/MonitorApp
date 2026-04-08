@@ -95,7 +95,7 @@ public class App
                 }
                 else if (notification is EmailNotificationDto emailDto)
                 {
-                    format = emailDto.Format ?? "xml";
+                    format = emailDto.Format ?? "plaintext";
                     renderer = new HtmlMessageRenderer();
                 }
 

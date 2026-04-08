@@ -1,31 +1,34 @@
 # MonitorApp
 
-A console application designed to monitor data sources (MSSQL or Elasticsearch) by executing defined queries and sending notifications via Email, SMS, or Microsoft Teams.
-- An example of a configuration file can be found in `mock.json`
----
+MonitorApp is a .NET console application for monitoring data sources like MSSQL and Elasticsearch. It executes user-defined queries and uses templated notifications through various channels, including Email, Microsoft Teams, and SMS, **when query results are found**.
 
+An example of a complete configuration file can be found in `MockFiles/`.
+___
 ## Getting Started
+
 ### First Run
-Upon its first execution, if the main configuration file (`_Config/config.json`) is not found, MonitorApp will automatically create a template `config.json` populated with example connections and queries. The application will then exit. User then needs to set up his configuration.
+On its first run, MonitorApp looks for a configuration file at `_Config/config.json` (relative to its execution directory). If this file doesn't exist, the application will notify you, create it and exit.
 
 ### Running the Application
-*   **Standard Run:** To execute all defined queries in `config.json`:
-	* you can also build and run the `.exe`
+
+*   **Standard Run:** To execute all queries defined in `config.json`:
 ```bash
 dotnet run
 ```
-*   **Test Specific Query:** To run only a single, named query for testing purposes:
+Alternatively, build the project and run the executable.
+
+*   **Test a Specific Query:** To run a single named query for testing or debugging:
 ```bash
 dotnet run /test:"YourQueryName"
 ```
-- Replace `"YourQueryName"` with the `name` of a query defined in your `config.json`.
----
+Replace `"YourQueryName"` with the exact `name` of a query from your configuration.
 
+___
 ## Configuration (`_Config/config.json`)
 
-All application behavior is driven by the `_Config/config.json` file. This file defines your database connections, the queries to be executed, and the notification channels to be used.
+All application behavior is driven by the `_Config/config.json` file. This file is the single source for database connections, queries, and notification settings.
 
-The basic structure of `config.json` is:
+The basic structure is a JSON object with two main keys:
 ```json
 {
   "Connections": [
@@ -36,8 +39,9 @@ The basic structure of `config.json` is:
   ]
 }
 ```
+
 ### Connections
-This section defines your connections to various data sources.
+This array defines the connection details for your data sources.
 
 #### MSSQL Connection (`"type": "sql"`)
 ```json
@@ -47,9 +51,9 @@ This section defines your connections to various data sources.
   "connectionString": "Server=YOUR_SERVER;Database=YOUR_DB;User Id=YOUR_USER;Password=YOUR_PASSWORD;TrustServerCertificate=True;"
 }
 ```
-*   `"type"`: Must be `"sql"`.
-*   `"name"`: A unique identifier for this connection. Used by queries to reference this connection.
-*   `"connectionString"`: (Required) The standard connection string for your MSSQL database.
+*   `"type"`: **(Required)** Must be `"sql"`.
+*   `"name"`: **(Required)** A unique name to identify this connection. This is referenced by your queries.
+*   `"connectionString"`: **(Required)** The standard connection string for your MSSQL database.
 
 #### Elasticsearch Connection (`"type": "elastic"`)
 ```json
@@ -61,85 +65,59 @@ This section defines your connections to various data sources.
   "password": "changeme"
 }
 ```
-*   `"type"`: Must be `"elastic"`.
-*   `"name"`: A unique identifier for this connection.
-*   `"uri"`: (Required) The URI of your Elasticsearch instance.
-*   `"username"`: (Optional) Username for authentication.
-*   `"password"`: (Optional) Password for authentication.
----
+*   `"type"`: **(Required)** Must be `"elastic"`.
+*   `"name"`: **(Required)** A unique name for this connection.
+*   `"uri"`: **(Required)** The URI of your Elasticsearch instance.
+*   `"username"`: (Optional) Username for basic authentication.
+*   `"password"`: (Optional) Password for basic authentication.
 
+___
 ### Queries
-This section defines the queries MonitorApp will execute. Each query can specify multiple notifications.
+This array defines the monitoring queries MonitorApp will execute.
 
 #### Query Definition (`"type": "sql"` or `"type": "elastic"`)
-These queries are defined directly within `config.json` (or an `inFile` reference).
+These queries are defined directly within `config.json` or an `inFile` reference.
 
 ```json
 {
   "type": "sql", // or "elastic"
   "name": "MonitorCriticalErrors",
   "connection": "MyDatabaseConnection", // Name of a defined connection
-  "queryText": "SELECT TOP 10 ErrorMessage, Timestamp FROM ErrorLogs WHERE Severity = 'Critical'",
-  // "queryLang": "sql", // Optional for Elastic. If omitted, and not SQL, treated as JSON DSL.
+  "queryText": "SELECT * FROM ErrorLogs WHERE Severity = 'Critical'",
   "notifications": [
-    // List of notification definitions
+    // Array of notification definitions
   ]
 }
 ```
-*   `"type"`: Can be `"sql"` or `"elastic"`, depending on the connection type.
-*   `"name"`: A unique name for this query. Used for `dotnet run /test:"QueryName"`.
-*   `"connection"`: (Required) The `name` of a connection defined in the `Connections` section.
-*   `"queryText"`: (Required) The actual query string. For SQL connections, this is a SQL statement. For Elasticsearch, this can be an Elasticsearch SQL query or a JSON DSL query.
-*   `"queryLang"`: (Optional, for Elasticsearch only) Specify `"sql"` if `queryText` contains Elasticsearch SQL. If `queryText` is JSON DSL, omit this property.
-*   `"notifications"`: (Required) An array of notification definitions. Each object in this array configures a specific notification type to be sent when this query returns results.
+*   `"type"`: **(Required)** Must be `"sql"` or `"elastic"`.
+*   `"name"`: **(Required)** A unique name for the query. Essential for testing via the `/test` argument.
+*   `"connection"`: **(Required)** The `name` of a connection defined in the `Connections` section.
+*   `"queryText"`: **(Required)** The query to execute. For SQL, this is a standard SQL statement. For Elasticsearch, this can be an Elasticsearch SQL query or a JSON DSL query.
+*   `"notifications"`: **(Required)** An array of one or more notification objects to be triggered if the query returns results.
+##### Elasticsearch only
+*   `"queryLang"`: (Optional) Specify `"sql"` if `queryText` contains an Elasticsearch SQL query. If omitted, `queryText` is treated as JSON DSL.
+*   `"index"`: (Required for JSON DSL, optional for ES-SQL) The default index to run the query against. If `queryLang` is not `"sql"`, this field is mandatory.
 
 #### Query from File (`"type": "inFile"`)
-This allows you to load query definitions from a separate JSON file, useful for organizing complex configurations.
+For better organization, you can load queries from an external JSON file.
 
 ```json
 {
   "type": "inFile",
-  "name": "LoadQueriesFromFile",
+  "name": "LoadQueriesFromExternalFile",
   "path": "AdditionalQueries.json" // Path relative to the _Config directory
 }
 ```
-*   `"type"`: Must be `"inFile"`.
-*   `"name"`: A unique name for this `inFile` entry.
-*   `"path"`: (Required) The filename of the JSON file containing additional queries. This file should be placed in the `_Config` directory. The content of this file should be an array of query definitions, similar to the `Queries` array in the main `config.json`.
-    A working example can be found at `mock_sql_selects.json`.
+*   `"type"`: **(Required)** Must be `"inFile"`.
+*   `"name"`: **(Required)** A unique name for this `inFile` entry.
+*   `"path"`: **(Required)** The filename of the JSON file containing more queries. 
+	* This file **must be located in the `_Config` directory**.
+	* Its content should be a JSON array of query objects. 
+		* An example is provided in `MockInFile.json`.
 
-    **Example `AdditionalQueries.json` content:**
-```json
-    [
-      {
-        "type": "sql",
-        "name": "Sample SQL Query",
-        "connection": "MySqlConnection",
-        "queryText": "SELECT * FROM users",
-        "queryLang": "sql",
-        "notifications": [
-          {
-            "type": "email",
-            "name": "SampleEmailNotification",
-            "smtpServer": "smtp.example.com",
-            "smtpPort": "587",
-            "username": "user@example.com",
-            "password": "password",
-            "fromEmail": "from@example.com",
-            "toEmail": "to@example.com",
-            "subject": "Inactive Users Alert",
-            "useSsl": "true",
-            "notificationText": "User found: {username}"
-          }
-        ]
-      },
-	   //...
-    ]
-```
----
-
-### Notifications (within Queries)
-Each query have an array of notification objects.
+___
+### Notifications
+Defined within a query's `"notifications"` array, these objects specify how and where to send alerts.
 
 #### Email Notification (`"type": "email"`)
 ```json
@@ -154,17 +132,14 @@ Each query have an array of notification objects.
   "toEmail": "admin@example.com",
   "subject": "MonitorApp Alert: {QueryName} results",
   "useSsl": "true",
-  "format": "xml", // or "plaintext"
-  "notificationText": "<head><h1>Alert!</h1></head><body><p>Query <b>{QueryName}</b> returned results:</p><group by="Severity"><header><h3>Severity: {Severity}</h3></header><item><p>- {ErrorMessage} at {Timestamp}</p></item><footer><hr/></footer></group></body><footer><small>Generated by MonitorApp</small></footer>"
+  "format": "xml",
+  "notificationText": "..."
 }
 ```
-*   `"type"`: Must be `"email"`.
-*   `"name"`: A unique name for this notification.
-*   `"smtpServer"`, `"smtpPort"`, `"fromEmail"`, `"toEmail"`, `"subject"`, `"useSsl"`: (Required) Standard SMTP configuration details.
-*   `"username"`, `"password"`: (Optional) Credentials for SMTP authentication. Only required if your SMTP server requires authentication.
-*   `"plaintext"`: Treats `notificationText` as a literal string. Placeholders will be replaced with data from each row of the query result. The entire `notificationText` will be repeated for every row returned by the query.
-    **Example:** If `notificationText` is `"Error: {ErrorMessage}"` and two errors are returned, the email body will be `Error: Message1\nError: Message2`.
-*   `"notificationText"`: (Required) The content of the email. This can be plain text, an XML-like structure for rich HTML, or raw Markdown.
+*   `"format"`: (Optional) Defines the format of `notificationText`.
+    *   `"plaintext"`: (Default) Text is sent as-is.
+    *   `"xml"`: Enables rich HTML generation using an XML-like structure. Allows placeholders
+*   `"notificationText"`: **(Required)** The email body. Can be plaintext or an XML structure for HTML. See advanced formatting below.
 
 #### SMS Notification (`"type": "sms"`)
 ```json
@@ -179,10 +154,8 @@ Each query have an array of notification objects.
   "notificationText": "MonitorApp Alert for {QueryName}: {ErrorMessage} at {Timestamp}"
 }
 ```
-*   `"type"`: Must be `"sms"`.
-*   `"name"`: A unique name for this notification.
-*   `"apiUrl"`, `"accountSid"`, `"authToken"`, `"fromNumber"`, `"toNumber"`: (Required) Configuration for your SMS provider's API.
-*   `"notificationText"`: (Required) The content of the SMS message. Placeholders will be replaced.
+* This notification type only supports plaintext messages. 
+* Also allows placeholder replacement.
 
 #### Teams Notification (`"type": "teams"`)
 ```json
@@ -190,76 +163,99 @@ Each query have an array of notification objects.
   "type": "teams",
   "name": "TeamChannelAlert",
   "webhookUrl": "https://outlook.office.com/webhook/...",
-  "format": "xml", // or "markdown", or "plaintext"
-  "notificationText": "<head># **Alert: {QueryName}**</head><group by="Severity"><header>## Severity: {Severity}</header><item>- **Alert ID**: {AlertID} | Message: {Message}</item><footer>---</footer></group><footer>End of Alerts.</footer>"
+  "format": "markdown",
+  "notificationText": "..."
 }
 ```
-*   `"type"`: Must be `"teams"`.
-*   `"name"`: A unique name for this notification.
-*   `"webhookUrl"`: (Required) The Microsoft Teams incoming webhook URL. 
-*   `"format"`: (Optional) Specifies the format of `notificationText`.
-    *   `"xml"`: Treats `notificationText` as an XML-like structure for Markdown generation and grouping.
-    *   `"markdown"`: Treats `notificationText` as a raw Markdown string. Placeholders will be replaced with data from each row of the query result.
-    *   `"plaintext"`: Treats `notificationText` as a literal string. Placeholders will be replaced with data from each row of the query result. The entire `notificationText` will be repeated for every row returned by the query.
-        **Example:** If `notificationText` is `"Alert: {AlertID}"` and two alerts are returned, the Teams message body will be `Alert: 123\nAlert: 456`.
-*   `"notificationText"`: (Required) The content for the Teams message. This can be plain text, a raw Markdown string, or an XML-like structure combining Markdown with grouping.
----
+*   `"webhookUrl"`: **(Required)** The Microsoft Teams incoming webhook URL.
+*   `"format"`: (Optional) Specifies how to interpret `notificationText`.
+    *   `"plaintext"`: Text is sent as-is.
+    *   `"markdown"`: Treats the text as a raw Markdown string. Use `\n` for line breaks.
+    *   `"xml"`: Enables Markdown generation using an XML-like structure, supporting grouping and complex layouts.
+*   `"notificationText"`: **(Required)** The message content. Can be plaintext, raw Markdown, or an XML structure for advanced Markdown. See advanced formatting below.
 
-## Advanced Notification Text Formatting
-MonitorApp supports powerful templating for `notificationText` to generate dynamic and structured messages.
+___
+## Advanced Notification Formatting
+
+MonitorApp’s templating allows you to create dynamic, data-driven messages.
 
 ### Placeholders
-You can embed placeholders directly into your `notificationText` using curly braces `{ColumnName}`. These will be automatically replaced with values from your query results.
+Any column name from your query result can be used as a placeholder by wrapping it in curly braces: `{ColumnName}`.
 
-**Example:** If your query returns a column named `ErrorMessage`, you can use `{ErrorMessage}` in your `notificationText`.
-```
-"notificationText": "Error in system: {ErrorMessage} at {Timestamp}"
-```
+**Example:**
+If your query returns rows with an `ErrorMessage` column, you can use:
+`"notificationText": "Error found: {ErrorMessage}"`
 
-### XML-like Formatting (for `Email` and `Teams` with `"format": "xml"`)
-For rich, structured messages, you can use an XML-like syntax within your `notificationText`. The system will automatically parse these tags to create a formatted output (HTML for Email, Markdown for Teams).
+### Advanced Placeholders
+Special placeholders provide metadata about the query results.
 
-**Supported Tags:**
-*   `<head>...</head>`: Content for the message header. Rendered once.
-*   `<body>...</body>`: Content for the main body. If it contains placeholders, it will repeat for each row in the query result. If it does not contain placeholders, it will render once as static content.
-*   `<footer>...</footer>`: Content for the message footer. Rendered once.
-*   `<group by="ColumnName">...</group>`: This tag allows you to group query results by a specified column and define templates for the group header, individual items, and group footer.
+*   `{global.count}`: Returns the **total number of rows** returned by the query. This can be used anywhere in the template.
+*   `{group.count}`: Only available within a `<group>` block (see XML formatting). It returns the **number of items within the current group**.
 
-#### Grouping (`<group by="ColumnName">`)
-When `format` is `"xml"` and you use the `<group>` tag, MonitorApp will group your query results by the value of the column specified in the `by` attribute.
-
-**Sub-tags within `<group>`:**
-*   `<header>...</header>`: Content for the header of each group. Rendered once per unique group. Placeholders here will be filled using the data from the *first item* in that group.
-*   `<item>...</item>`: Content for each individual item within a group. This template will repeat for every row belonging to that group.
-*   `<footer>...</footer>`: Content for the footer of each group. Rendered once per unique group. Placeholders here will also be filled using data from the *first item* in that group.
-
-**Example (Email HTML with grouping):**
+**Example (using `global.count`):**
 ```xml
-<head><h1>Server Issues Report</h1></head>
+<head>
+  <h1>Critical Errors Report</h1>
+  <p>Total errors found: {global.count}</p>
+</head>
+```
+
+### XML-like Formatting (`"format": "xml"`)
+This formatting option is available for both **Email (HTML)** and **Teams (Markdown)**. It allows for structured layouts with headers, footers, and result grouping.
+
+The engine build's it into a working HTML or  Adaptive card's format.
+
+**Core Tags:**
+*   `<head>...</head>`: Renders once at the beginning of the message.
+*   `<body>...</body>`: Defines the template for each result row if it contains placeholders. If not, it renders once as static content.
+*   `<footer>...</footer>`: Renders once at the end of the message.
+*   `<group by="ColumnName">...</group>`: The key feature for structured reports. It groups query results by a specified column.
+
+#### Grouping with `<group>`
+The `<group>` tag organizes results into logical sections. It must contain `<header>`, `<item>`, and `<footer>` tags.
+
+*   `<header>...</header>`: Template for the beginning of each new group. You can use placeholders here, including `{ColumnName}` (for the value being grouped by) and `{group.count}`.
+*   `<item>...</item>`: Template for each individual row within a group.
+*   `<footer>...</footer>`: Template for the end of each group.
+
+**Example: Email (HTML) with Grouping**
+This template groups alerts by `ServerName` and puts them in a table.
+
+```xml
+<head><h1>Server Issues Report ({global.count} total)</h1></head>
 <group by="ServerName">
-  <header><h2>Server: {ServerName}</h2><table border="1"><thead><tr><th>Error</th><th>Time</th></tr></thead><tbody></header>
-  <item><tr><td>{ErrorMessage}</td><td>{Timestamp}</td></tr></item>
-  <footer></tbody></table></footer>
+  <header>
+    <h2>Server: {ServerName} ({group.count} issues)</h2>
+    <table border="1">
+      <thead><tr><th>Error</th><th>Time</th></tr></thead>
+      <tbody>
+  </header>
+  <item>
+    <tr><td>{ErrorMessage}</td><td>{Timestamp}</td></tr>
+  </item>
+  <footer>
+      </tbody>
+    </table>
+  </footer>
 </group>
-<footer><hr/><p>Report Generated.</p></footer>
+<footer><hr/><p>Report Generated by MonitorApp.</p></footer>
 ```
 
-**Example (Teams Markdown with grouping):**
+**Example: Teams (Markdown) with Grouping**
+This template groups alerts by `Severity`, using Markdown formatting.
 
 ```xml
-<head># Critical Alerts Summary</head>
+<head># Critical Alerts Summary ({global.count} total)</head>
 <group by="Severity">
-  <header>## Severity: {Severity}</header>
+  <header>## Severity: {Severity} ({group.count} alerts)</header>
   <item>- **Alert ID**: {AlertID} | Message: {Message}</item>
   <footer>---</footer>
 </group>
 <footer>End of Alerts.</footer>
 ```
-
----
-
+___
 ## Developer Notes
-The application uses C# and .NET 8.0.
-Configuration is deserialized using `System.Text.Json` with `JsonPolymorphic` attributes for handling different DTO types.
-Connection services implement `IConnectionService`, and notification services implement `INotificationService`.
-Message generation is handled by the `MessageBuilder` and `IMessageRenderer` pattern.
+*   **Technology**: Built with C# and .NET 8.0.
+*   **Configuration Parsing**: Uses `System.Text.Json` with `JsonPolymorphic` attributes to handle different DTO types for connections, queries, and notifications.
+*   **Extensibility**: Designed with interfaces like `IConnectionService` and `INotificationService` to allow for future expansion to other data sources and notification channels.
+*   **Message Generation**: The `MessageBuilder` class, along with the `IMessageRenderer` pattern (`HtmlMessageRenderer`, `MarkdownMessageRenderer`), handles the transformation of data and templates into final message content.
