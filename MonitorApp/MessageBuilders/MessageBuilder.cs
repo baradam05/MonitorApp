@@ -1,192 +1,201 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using MonitorApp.ConnectionServices;
+using MonitorApp.JsonParsing.DTO.Notifications;
 
-namespace MonitorApp.MessageBuilders;
-
-/// <summary>
-/// Parses notification templates and populates them with data from a QueryResult.
-/// </summary>
-public class MessageBuilder
+namespace MonitorApp.MessageBuilders
 {
-    private const string PlainTextFormat = "plaintext";
-    private const string XmlFormat = "xml";
-    private const string MarkdownFormat = "markdown";
-
     /// <summary>
-    /// Builds a structured message from a template and query result.
+    /// Builds notification messages by replacing placeholders in templates with query data.
+    /// Handles simple, grouped, and global placeholders.
     /// </summary>
-    public Message Build(QueryResult queryResult, string template, string? format)
+    public class MessageBuilder
     {
-        string effectiveFormat = format ?? PlainTextFormat;
-
-        if (effectiveFormat == PlainTextFormat)
+        /// <summary>
+        /// Main method to construct the final notification string.
+        /// </summary>
+        public string Build(QueryResult queryResult, NotificationDto notificationDto)
         {
-            return new Message { Body = template };
-        }
-
-        if (queryResult.Data.Count == 0)
-        {
-            return new Message();
-        }
-
-        int globalCount = queryResult.Data.Count;
-        template = template.Replace("{global.count}", globalCount.ToString());
-
-        string headerTemplate = string.Empty;
-        string bodyContent = string.Empty;
-        string footerTemplate = string.Empty;
-
-        if (effectiveFormat == XmlFormat)
-        {
-            try
+            NotificationBodyDto template = notificationDto.notificationBody;
+            bool isTeams = notificationDto is TeamsNotificationsDto;
+            Dictionary<string, string> globals = new()
             {
-                XDocument xmlDoc = XDocument.Parse($"<root>{template}</root>");
-                XElement? root = xmlDoc.Root;
+                ["global.time"] = DateTime.Now.ToString("HH:mm:ss"),
+                ["global.date"] = DateTime.Now.ToString("yyyy-MM-dd"),
+                ["global.datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["global.count"] = queryResult.Data.Count.ToString()
+            };
 
-                headerTemplate = root.Element("head") != null ? GetInnerXml(root.Element("head")) : string.Empty;
-                footerTemplate = root.Element("footer") != null ? GetInnerXml(root.Element("footer")) : string.Empty;
+            Dictionary<string, object>? firstRow = queryResult.Data.FirstOrDefault();
 
-                XElement? groupElement = root.Element("group");
-                XElement? bodyElement = root.Element("body");
-                XAttribute? groupByAttribute = groupElement?.Attribute("by");
-
-                if (groupElement != null && groupByAttribute != null && !string.IsNullOrEmpty(groupByAttribute.Value))
-                {
-                    bodyContent = BuildGroupedBody(queryResult, groupElement, groupByAttribute.Value);
-                }
-                else
-                {
-                    XElement? bodyTemplateElement = bodyElement ?? groupElement;
-                    string bodyTemplate = bodyTemplateElement != null ? GetInnerXml(bodyTemplateElement) : string.Empty;
-
-                    if (bodyTemplate.Contains("{") && bodyTemplate.Contains("}"))
-                    {
-                        bodyContent = BuildSimpleBody(queryResult.Data, bodyTemplate);
-                    }
-                    else
-                    {
-                        bodyContent = bodyTemplate;
-                    }
-                }
+            // Replace placeholders in the subject if it exists, using data from the first row.
+            if (notificationDto is EmailNotificationDto emailNotificationDto)
+            {
+                emailNotificationDto.subject = ReplacePlaceholders(emailNotificationDto.subject, firstRow, globals);
             }
-            catch
+
+            StringBuilder bodyBuilder = new();
+            
+            // Build the head, body, and foot sections.
+            if (!string.IsNullOrEmpty(template.head))
             {
-                // Fallback for failed XML parse or if format is Markdown but treated as XML
-                bodyContent = BuildSimpleBody(queryResult.Data, template);
+                string headContent = ReplacePlaceholders(template.head, firstRow, globals);
+                AppendWithTeamsFormatting(bodyBuilder, headContent, isTeams);
             }
-        }
-        else // MarkdownFormat
-        {
-            if (template.Contains("{") && template.Contains("}"))
+
+            // Build body (already handles Teams \n formatting internally per row/group)
+            string bodyContent = BuildBody(queryResult, template, globals, isTeams);
+            bodyBuilder.Append(bodyContent);
+
+            if (!string.IsNullOrEmpty(template.foot))
             {
-                bodyContent = BuildSimpleBody(queryResult.Data, template);
+                string footContent = ReplacePlaceholders(template.foot, firstRow, globals);
+                AppendWithTeamsFormatting(bodyBuilder, footContent, isTeams);
+            }
+
+            return bodyBuilder.ToString();
+        }
+
+        // Constructs the main body of the message, delegating to grouping logic if needed.
+        private string BuildBody(QueryResult queryResult, NotificationBodyDto template, IReadOnlyDictionary<string, string> globals, bool isTeams)
+        {
+            // If 'groupBy' key is specified -> use the grouping logic.
+            if (!string.IsNullOrEmpty(template.groupBy))
+            {
+                return BuildGroupedBody(queryResult, template, globals, isTeams);
+            }
+
+            // Does body contains any data-related placeholders
+            ICollection<string>? columnKeys = queryResult.Data.FirstOrDefault()?.Keys;
+            bool hasDataPlaceholders = BodyHasDataPlaceholders(template.body, columnKeys);
+            
+            StringBuilder bodyBuilder = new();
+
+            // If it has data placeholders, iterate through each row to build the body.
+            if (hasDataPlaceholders)
+            {
+                foreach (Dictionary<string, object> row in queryResult.Data)
+                {
+                    string body = ReplacePlaceholders(template.body, row, globals);
+                    AppendWithTeamsFormatting(bodyBuilder, body, isTeams);
+                }
             }
             else
             {
-                bodyContent = template;
+                // Otherwise, just process the body once against the first row.
+                string firstRow = ReplacePlaceholders(template.body, queryResult.Data.FirstOrDefault(), globals);
+                AppendWithTeamsFormatting(bodyBuilder, firstRow, isTeams);
+            }
+            
+            return bodyBuilder.ToString();
+        }
+
+        // Constructs a message body by grouping results based on a specified key.
+        private string BuildGroupedBody(QueryResult queryResult, NotificationBodyDto template, IReadOnlyDictionary<string, string> globals, bool isTeams)
+        {
+            StringBuilder groupedBodyBuilder = new();
+            IEnumerable<IGrouping<string?, Dictionary<string, object>>> groupedData = queryResult.Data
+                .GroupBy(row => row.TryGetValue(template.groupBy, out object? key) ? key?.ToString() : null);
+
+            foreach (IGrouping<string?, Dictionary<string, object>> group in groupedData)
+            {
+                if (group.Key == null) continue;
+                
+                // Group-specific placeholders
+                Dictionary<string, string> groupGlobals = new()
+                {
+                    ["group.count"] = group.Count().ToString()
+                };
+                Dictionary<string, object> firstRowOfGroup = group.First();
+
+                // Build group header
+                if (!string.IsNullOrEmpty(template.groupHead))
+                {
+                    // Fixed: Using template.groupHead and firstRowOfGroup instead of body and global first row
+                    string headContent = ReplacePlaceholders(template.groupHead, firstRowOfGroup, globals, groupGlobals);
+                    AppendWithTeamsFormatting(groupedBodyBuilder, headContent, isTeams);
+                }
+                
+                // Build each item in the group
+                foreach (Dictionary<string, object> row in group)
+                {
+                    string bodyContent = ReplacePlaceholders(template.body, row, globals, groupGlobals);
+                    AppendWithTeamsFormatting(groupedBodyBuilder, bodyContent, isTeams);
+                }
+                
+                // Build group footer
+                if (!string.IsNullOrEmpty(template.groupFoot))
+                {
+                    string footContent = ReplacePlaceholders(template.groupFoot, firstRowOfGroup, globals, groupGlobals);
+                    AppendWithTeamsFormatting(groupedBodyBuilder, footContent, isTeams);
+                }
+            }
+            return groupedBodyBuilder.ToString();
+        }
+
+        /// Replaces all placeholders in a given string with data from global, group, or row-level dictionaries.
+        private string ReplacePlaceholders(string text, IReadOnlyDictionary<string, object>? row, IReadOnlyDictionary<string, string> globals, IReadOnlyDictionary<string, string>? groupGlobals = null)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            // Find all instances of {placeholder}.
+            return Regex.Replace(text, @"\{(.+?)\}", match =>
+            {
+                string key = match.Groups[1].Value;
+
+                //global placeholders
+                if (globals.TryGetValue(key, out string? globalValue))
+                {
+                    return globalValue;
+                }
+                
+                //group placeholders
+                if (groupGlobals != null && groupGlobals.TryGetValue(key, out string? groupGlobalValue))
+                {
+                    return groupGlobalValue;
+                }
+                
+                //row placeholders
+                if (row != null && row.TryGetValue(key, out object? value))
+                {
+                    return value?.ToString() ?? string.Empty;
+                }
+
+                //unmatched
+                return match.Value;
+            });
+        }
+        
+        // Checks if a template string contains any placeholders that correspond to actual data columns, ignoring global and group placeholders
+        private bool BodyHasDataPlaceholders(string bodyTemplate, ICollection<string>? columnKeys)
+        {
+            if (string.IsNullOrEmpty(bodyTemplate) || columnKeys == null || columnKeys.Count == 0) return false;
+
+            MatchCollection matches = Regex.Matches(bodyTemplate, @"\{(.+?)\}");
+            return (from Match match in matches
+                let key = match.Groups[1].Value
+                where !key.StartsWith("global.") && !key.StartsWith("group.")
+                select key).Any(columnKeys.Contains);
+        }
+
+        /// <summary>
+        /// Helper method to append content to a StringBuilder.
+        /// If it's a Teams notification, ensures the content ends with a newline.
+        /// </summary>
+        private void AppendWithTeamsFormatting(StringBuilder sb, string content, bool isTeams)
+        {
+            if (string.IsNullOrEmpty(content)) return;
+
+            sb.Append(content);
+
+            if (isTeams && !content.EndsWith("\n"))
+            {
+                sb.Append('\n');
             }
         }
-
-        Dictionary<string, object> firstRow = queryResult.Data[0];
-        string finalHeader = ReplacePlaceholders(headerTemplate, firstRow);
-        string finalFooter = ReplacePlaceholders(footerTemplate, firstRow);
-
-        return new Message
-        {
-            Header = finalHeader,
-            Body = bodyContent.Trim(),
-            Footer = finalFooter
-        };
-    }
-
-    // Extracts the inner XML content of an XElement.
-    private string GetInnerXml(XElement element)
-    {
-        using (System.Xml.XmlReader reader = element.CreateReader())
-        {
-            reader.MoveToContent();
-            return reader.ReadInnerXml();
-        }
-    }
-
-    // Builds the message body by repeating a template for each data row.
-    private string BuildSimpleBody(List<Dictionary<string, object>> dataRows, string bodyTemplate)
-    {
-        StringBuilder bodyBuilder = new();
-        foreach (Dictionary<string, object> row in dataRows)
-        {
-            bodyBuilder.AppendLine(ReplacePlaceholders(bodyTemplate, row));
-        }
-        return bodyBuilder.ToString();
-    }
-
-    // Builds the message body by grouping data rows.
-    private string BuildGroupedBody(QueryResult queryResult, XElement groupElement, string groupingKey)
-    {
-        string groupHeaderTemplate = groupElement.Element("header") != null
-            ? GetInnerXml(groupElement.Element("header"))
-            : string.Empty;
-        string groupItemTemplate = groupElement.Element("item") != null
-            ? GetInnerXml(groupElement.Element("item"))
-            : string.Empty;
-        string groupFooterTemplate = groupElement.Element("footer") != null
-            ? GetInnerXml(groupElement.Element("footer"))
-            : string.Empty;
-
-        System.Linq.IGrouping<string, Dictionary<string, object>>[] groupedData = queryResult.Data
-            .GroupBy(row =>
-            {
-                string? key = row.Keys.FirstOrDefault(k => string.Equals(k, groupingKey, StringComparison.OrdinalIgnoreCase));
-                return key == null ? null : row[key]?.ToString();
-            }, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        // Inject group.count directly into the data rows for each group
-        foreach (System.Linq.IGrouping<string, Dictionary<string, object>> group in groupedData)
-        {
-            int groupCount = group.Count();
-            foreach (Dictionary<string, object> row in group)
-            {
-                // Add the count to each row in the group.
-                row["group.count"] = groupCount;
-            }
-        }
-
-        StringBuilder bodyBuilder = new();
-        foreach (System.Linq.IGrouping<string, Dictionary<string, object>> group in groupedData)
-        {
-            if (!group.Any()) continue;
-            Dictionary<string, object> firstRowOfGroup = group.First();
-
-            bodyBuilder.AppendLine(ReplacePlaceholders(groupHeaderTemplate, firstRowOfGroup));
-            foreach (Dictionary<string, object> row in group)
-            {
-                bodyBuilder.AppendLine(ReplacePlaceholders(groupItemTemplate, row));
-            }
-            bodyBuilder.AppendLine(ReplacePlaceholders(groupFooterTemplate, firstRowOfGroup));
-        }
-        return bodyBuilder.ToString();
-    }
-
-    // Replaces placeholders like {ColumnName} with values from a data row.
-    private string ReplacePlaceholders(string text, Dictionary<string, object> row)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-
-        return Regex.Replace(text, @"\{(.+?)\}", match =>
-        {
-            string columnName = match.Groups[1].Value;
-            if (row.TryGetValue(columnName, out object? value))
-            {
-                return value?.ToString() ?? string.Empty;
-            }
-            return match.Value;
-        });
     }
 }

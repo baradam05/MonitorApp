@@ -10,5 +10,4 @@ public class EmailNotificationDto : NotificationDto
     public required string toEmail { get; set; }
     public required string subject { get; set; }
     public required string useSsl { get; set; }
-    public string? Format { get; set; }
 }

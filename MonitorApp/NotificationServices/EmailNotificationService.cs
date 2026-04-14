@@ -41,14 +41,26 @@ public class EmailNotificationService : INotificationService
                 smtpClient.Credentials = new NetworkCredential(config.username, config.password);
             }
 
-            bool isHtml = message.TrimStart().StartsWith("<html>", StringComparison.OrdinalIgnoreCase);
+            string body = message;
+            bool isHtml = body.TrimStart().StartsWith("<html>", StringComparison.OrdinalIgnoreCase) 
+                          || body.TrimStart().StartsWith("<head>", StringComparison.OrdinalIgnoreCase);
+
+            if (!isHtml)
+            {
+                body = $@"
+                        <html>
+                            <body>
+                                {body}
+                            </body>
+                        </html>";
+            }
 
             using MailMessage mailMessage = new()
             {
                 From = new MailAddress(config.fromEmail),
                 Subject = config.subject,
-                Body = message,
-                IsBodyHtml = isHtml
+                Body = body,
+                IsBodyHtml = true 
             };
 
             mailMessage.To.Add(config.toEmail);

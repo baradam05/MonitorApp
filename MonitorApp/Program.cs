@@ -52,14 +52,29 @@ class Program
                           "toEmail": "TO_EMAIL@example.com",
                           "subject": "Mock Notification",
                           "useSsl": "true",
-                          "notificationText": "This is a mock notification."
+                          "notificationBody": {
+                            "body": "This is a mock notification."
+                          }
                         },
                         {
                           "type": "teams",
                           "name": "MockTeamsNotification",
                           "webhookUrl": "YOUR_TEAMS_WEBHOOK_URL",
-                          "format": "xml",
-                          "notificationText": "This is another mock notification."
+                          "notificationBody": {
+                            "body": "This is another mock notification."
+                          }
+                        },
+                        {
+                          "type": "sms",
+                          "name": "MockSmsNotification",
+                          "apiUrl": "https://api.sms_provider.com/send",
+                          "accountSid": "YOUR_SID",
+                          "authToken": "YOUR_TOKEN",
+                          "fromNumber": "+1234567890",
+                          "toNumber": "+1987654321",
+                          "notificationBody": {
+                            "body": "This is a mock SMS notification."
+                          }
                         }
                       ]
                     },
@@ -74,7 +89,16 @@ class Program
                       "connection": "MockElasticConnection",
                       "index": "mock-index",
                       "queryText": "{\\\"query\\\":{\\\"match_all\\\":{}}}",
-                      "notifications": []
+                      "notifications": [
+                        {
+                          "type": "teams",
+                          "name": "MockESTeamsNotification",
+                          "webhookUrl": "YOUR_TEAMS_WEBHOOK_URL",
+                          "notificationBody": {
+                            "body": "This is a mock ES notification."
+                          }
+                        }
+                      ]
                     }
                   ]
                 }
@@ -110,7 +134,7 @@ class Program
             return;
         }
 
-        //Argument to test certain XXX
+        //Argument to test certain query
         Match m = Regex.Match(command, @"^/test:(?:""([^""]+)""|(.+))$", RegexOptions.IgnoreCase);
         if (m.Success)
         {

@@ -20,8 +20,9 @@
           "type": "teams",
           "name": "TeamsRawMarkdown",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "markdown",
-          "notificationText": "## Error in {service.name}!\n\n**Message**: {error.message}\n\nThis will be repeated for every row."
+          "notificationBody": {
+            "body": "## Error in {service.name}!\n\n**Message**: {error.message}\n\nThis will be repeated for every row."
+          }
         }
       ]
     },
@@ -36,8 +37,11 @@
           "type": "teams",
           "name": "TeamsSimpleHBF",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "xml",
-          "notificationText": "<head># Static Header</head><body>This is a static body, it will appear only once.</body><footer>--- Static Footer ---</footer>"
+          "notificationBody": {
+            "head": "# Static Header",
+            "body": "This is a static body, it will appear only once.",
+            "foot": "---\nStatic Footer"
+          }
         }
       ]
     },
@@ -52,8 +56,9 @@
           "type": "teams",
           "name": "TeamsPlaceholders",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "xml",
-          "notificationText": "<body>## Alert for {service.name}\n\n**Message**: {error.message}</body>"
+          "notificationBody": {
+            "body": "## Alert for {service.name}\n**Message**: {error.message}"
+          }
         }
       ]
     },
@@ -68,8 +73,10 @@
           "type": "teams",
           "name": "TeamsCounters",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "xml",
-          "notificationText": "<head># Total errors: {global.count}</head><body>- Error message: {error.message}</body>"
+          "notificationBody": {
+            "head": "# Total errors: {global.count}",
+            "body": "- Error message: {error.message}"
+          }
         }
       ]
     },
@@ -84,8 +91,14 @@
           "type": "teams",
           "name": "TeamsGrouping",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "xml",
-          "notificationText": "<head># Grouped Error Report</head><group by=\"service.name\"><header>## Service: {service.name} ({group.count} errors)</header><item>- {error.message} at {@timestamp}</item><footer>---</footer></group>"
+          "notificationBody": {
+            "head": "# Grouped Error Report",
+            "groupBy": "service.name",
+            "groupHead": "## Service: {service.name} ({group.count} errors)",
+            "body": "- {error.message} at {@timestamp}",
+            "groupFoot": "---",
+            "foot": "End of report"
+          }
         }
       ]
     }

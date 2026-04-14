@@ -31,6 +31,7 @@ public class App
 
         List<QueryDTO> queriesToRun = config.QueriesObjects;
 
+        //If Run() is called with a query name, filter the queries to run only that one - for /test:"" command line usage
         if (!string.IsNullOrEmpty(singleQueryName))
         {
             queriesToRun = config.QueriesObjects.Where(q => q.name == singleQueryName).ToList();
@@ -83,32 +84,7 @@ public class App
             foreach (NotificationDto notification in q.notifications)
             {
                 MessageBuilder messageBuilder = new();
-                string finalMessage;
-
-                string? format = null;
-                IMessageRenderer? renderer = null;
-
-                if (notification is TeamsNotificationsDto teamsDto)
-                {
-                    format = teamsDto.Format;
-                    renderer = new MarkdownMessageRenderer();
-                }
-                else if (notification is EmailNotificationDto emailDto)
-                {
-                    format = emailDto.Format ?? "plaintext";
-                    renderer = new HtmlMessageRenderer();
-                }
-
-                Message message = messageBuilder.Build(result, notification.notificationText, format);
-
-                if (renderer != null)
-                {
-                    finalMessage = renderer.Render(message);
-                }
-                else
-                {
-                    finalMessage = message.Body;
-                }
+                string finalMessage = messageBuilder.Build(result, notification);
 
                 if (string.IsNullOrEmpty(finalMessage))
                 {
@@ -116,6 +92,7 @@ public class App
                     continue;
                 }
 
+                //Notification sending
                 List<INotificationService> services = CreateNotificationServices(new List<NotificationDto> { notification });
                 INotificationService n = services.First();
 

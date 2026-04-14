@@ -9,8 +9,9 @@
         "type": "teams",
         "name": "InFileTeamsNotification",
         "webhookUrl": "https://outlook.office.com/webhook/...",
-        "format": "markdown",
-        "notificationText": "Alert from InFile: **{ExternalData}**. Priority: *{Priority}*"
+        "notificationBody": {
+          "body": "Alert from InFile: **{ExternalData}**. Priority: *{Priority}*"
+        }
       }
     ]
   }

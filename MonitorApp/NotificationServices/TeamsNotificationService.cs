@@ -66,25 +66,29 @@ public class TeamsNotificationService : INotificationService
     private List<object> CreateAdaptiveCardBody(string message)
     {
         List<object> bodyElements = new();
-        string[] lines = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
         foreach (string line in lines)
         {
             string trimmedLine = line.Trim();
+
+            if(trimmedLine.Length == 0)
+                continue;
+            
             if (trimmedLine.StartsWith("## "))
             {
-                bodyElements.Add(new { type = "TextBlock", text = trimmedLine.Substring(3), size = "Medium", weight = "Bolder", wrap = true });
+                bodyElements.Add(new { type = "TextBlock", text = trimmedLine.Substring(3), size = "Medium", weight = "Bolder", style = "heading", wrap = true });
             }
             else if (trimmedLine.StartsWith("# "))
             {
-                bodyElements.Add(new { type = "TextBlock", text = trimmedLine.Substring(2), size = "Large", weight = "Bolder", wrap = true });
+                bodyElements.Add(new { type = "TextBlock", text = trimmedLine.Substring(2), size = "Large", weight = "Bolder", style = "heading", wrap = true });
             }
             else
             {
-
                 bodyElements.Add(new { type = "TextBlock", text = line, wrap = true });
             }
         }
+
         return bodyElements;
     }
 }

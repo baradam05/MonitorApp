@@ -36,15 +36,17 @@
           "toEmail": "to@example.com",
           "subject": "SQL Alert",
           "useSsl": "true",
-          "format": "plaintext",
-          "notificationText": "SQL Query returned: {Info} with severity {Severity}."
+          "notificationBody": {
+            "body": "SQL Query returned: {Info} with severity {Severity}."
+          }
         },
         {
           "type": "teams",
           "name": "SqlTeamsPlain",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "plaintext",
-          "notificationText": "SQL Query returned: {Info} with severity {Severity}."
+          "notificationBody": {
+            "body": "SQL Query returned: {Info} with severity {Severity}."
+          }
         },
         {
           "type": "sms",
@@ -54,7 +56,9 @@
           "authToken": "xxxxxxxx",
           "fromNumber": "+1234567890",
           "toNumber": "+12345678901",
-          "notificationText": "SQL Alert: {Info} - {Severity}"
+          "notificationBody": {
+            "body": "SQL Alert: {Info} - {Severity}"
+          }
         }
       ]
     },
@@ -76,15 +80,17 @@
           "toEmail": "to@example.com",
           "subject": "ES Alert",
           "useSsl": "true",
-          "format": "plaintext",
-          "notificationText": "Elasticsearch query returned: {field1} with value {field2}."
+          "notificationBody": {
+            "body": "Elasticsearch query returned: {field1} with value {field2}."
+          }
         },
         {
           "type": "teams",
           "name": "EsTeamsPlain",
           "webhookUrl": "https://outlook.office.com/webhook/...",
-          "format": "plaintext",
-          "notificationText": "Elasticsearch query returned: {field1} with value {field2}."
+          "notificationBody": {
+            "body": "Elasticsearch query returned: {field1} with value {field2}."
+          }
         },
         {
           "type": "sms",
@@ -94,7 +100,9 @@
           "authToken": "xxxxxxxx",
           "fromNumber": "+1234567890",
           "toNumber": "+12345678901",
-          "notificationText": "ES Alert"
+          "notificationBody": {
+            "body": "ES Alert"
+          }
         }
       ]
     }

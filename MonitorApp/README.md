@@ -117,8 +117,21 @@ For better organization, you can load queries from an external JSON file.
 
 ___
 ### Notifications
-Defined within a query's `"notifications"` array, these objects specify how and where to send alerts.
+Defined within a query's `"notifications"` array, these objects specify how and where to send alerts. All notification types share a common structure for defining the message content, contained within the `notificationBody` object.
 
+---
+#### Notification Body Structure
+The `notificationBody` object is a flexible container for your message template.
+
+```json
+"notificationBody": {
+  "head": "Optional header",
+  "body": "Required body",
+  "foot": "Optional footer",
+}
+```
+* For simple messages, you only need to provide the `body` field.
+- You can group your query - for more below
 #### Email Notification (`"type": "email"`)
 ```json
 {
@@ -130,17 +143,15 @@ Defined within a query's `"notifications"` array, these objects specify how and 
   "password": "your_password",
   "fromEmail": "monitor@example.com",
   "toEmail": "admin@example.com",
-  "subject": "MonitorApp Alert: {QueryName} results",
+  "subject": "MonitorApp Alert: Found {global.count} issues",
   "useSsl": "true",
-  "format": "xml",
-  "notificationText": "..."
+  "notificationBody": {
+    "body": "<p>Found an issue: {ErrorMessage} on server {ServerName}.<\p>"
+  }
 }
 ```
-*   `"format"`: (Optional) Defines the format of `notificationText`.
-    *   `"plaintext"`: (Default) Text is sent as-is.
-    *   `"xml"`: Enables rich HTML generation using an XML-like structure. Allows placeholders
-*   `"notificationText"`: **(Required)** The email body. Can be plaintext or an XML structure for HTML. See advanced formatting below.
-
+* The `subject` can also contain placeholders, which will be populated from the first row of data.
+* For body use html elements
 #### SMS Notification (`"type": "sms"`)
 ```json
 {
@@ -151,11 +162,12 @@ Defined within a query's `"notifications"` array, these objects specify how and 
   "authToken": "YOUR_TOKEN",
   "fromNumber": "+1234567890",
   "toNumber": "+1987654321",
-  "notificationText": "MonitorApp Alert for {QueryName}: {ErrorMessage} at {Timestamp}"
+  "notificationBody": {
+    "body": "MonitorApp Alert for {QueryName}: {ErrorMessage} at {Timestamp}"
+  }
 }
 ```
-* This notification type only supports plaintext messages. 
-* Also allows placeholder replacement.
+*   For SMS only use "body" as it doesn't support html nor markdown formatting
 
 #### Teams Notification (`"type": "teams"`)
 ```json
@@ -163,95 +175,103 @@ Defined within a query's `"notifications"` array, these objects specify how and 
   "type": "teams",
   "name": "TeamChannelAlert",
   "webhookUrl": "https://outlook.office.com/webhook/...",
-  "format": "markdown",
-  "notificationText": "..."
+  "notificationBody": {
+    "head": "# Critical System Alert!",
+    "body": "- **Service**: {service.name}\\n- **Error**: {error.message}"
+  }
 }
 ```
-*   `"webhookUrl"`: **(Required)** The Microsoft Teams incoming webhook URL.
-*   `"format"`: (Optional) Specifies how to interpret `notificationText`.
-    *   `"plaintext"`: Text is sent as-is.
-    *   `"markdown"`: Treats the text as a raw Markdown string. Use `\n` for line breaks.
-    *   `"xml"`: Enables Markdown generation using an XML-like structure, supporting grouping and complex layouts.
-*   `"notificationText"`: **(Required)** The message content. Can be plaintext, raw Markdown, or an XML structure for advanced Markdown. See advanced formatting below.
+* Content is treated as Markdown. 
+* The message builder automatically handles newlines between sections, but you can include your own (`\n`) for finer control.
+* Headers are limited to `# ` and `## `
 
 ___
 ## Advanced Notification Formatting
 
-MonitorApp’s templating allows you to create dynamic, data-driven messages.
+MonitorApp’s templating allows you to create dynamic, data-driven messages using the `notificationBody` object.
 
 ### Placeholders
 Any column name from your query result can be used as a placeholder by wrapping it in curly braces: `{ColumnName}`.
 
 **Example:**
 If your query returns rows with an `ErrorMessage` column, you can use:
-`"notificationText": "Error found: {ErrorMessage}"`
+```json
+"notificationBody": {
+  "body": "Error found: {ErrorMessage}"
+}
+```
 
 ### Advanced Placeholders
 Special placeholders provide metadata about the query results.
 
-*   `{global.count}`: Returns the **total number of rows** returned by the query. This can be used anywhere in the template.
-*   `{group.count}`: Only available within a `<group>` block (see XML formatting). It returns the **number of items within the current group**.
+- **Global placeholders** - can be used in `head`, `body`, `foot`, `groupHead`, `groupFoot` and in `Subject` if email.
+	* `{global.count}`: **total number of rows** returned by the query.
+	* `{global.time}`: **current time**. (*HH:mm:ss*)
+	* `{global.date}`: **current date**. (*yyyy-MM-dd*)
+	* `{global.datetime}`: **current date and time**. (*yyyy-MM-dd HH:mm:ss*)
+	
+* **Group placeholders** - Only available when using `groupBy`. Can be used in `groupHead`, `body` and `groupFoot`
+	* `{group.count}`: It returns the **number of items within the current group**.
 
 **Example (using `global.count`):**
-```xml
-<head>
-  <h1>Critical Errors Report</h1>
-  <p>Total errors found: {global.count}</p>
-</head>
+```json
+"notificationBody": {
+  "head": "<h1>Critical Errors Report</h1><p>Total errors found: {global.count}</p>",
+  "body": "<p>Error: {ErrorMessage}</p>"
+}
 ```
 
-### XML-like Formatting (`"format": "xml"`)
-This formatting option is available for both **Email (HTML)** and **Teams (Markdown)**. It allows for structured layouts with headers, footers, and result grouping.
+### Grouping Query Results
+The `groupBy` feature is the key to creating structured reports. It organizes query results into logical sections based on the values in a specified column.
 
-The engine build's it into a working HTML or  Adaptive card's format.
+```json
+{
+  "notificationBody": {
+    "groupBy": "Region", //Column
+    
+    "head": "# Message haed",
+    "groupHead": "## Region: {{Region}}",
+    "body": " - Store ID: {{StoreID}} (Sales: {{Total}})",
+    "groupFoot": "---",
+    "foot": "Global report finished."
+  }
+}
+```
 
-**Core Tags:**
-*   `<head>...</head>`: Renders once at the beginning of the message.
-*   `<body>...</body>`: Defines the template for each result row if it contains placeholders. If not, it renders once as static content.
-*   `<footer>...</footer>`: Renders once at the end of the message.
-*   `<group by="ColumnName">...</group>`: The key feature for structured reports. It groups query results by a specified column.
-
-#### Grouping with `<group>`
-The `<group>` tag organizes results into logical sections. It must contain `<header>`, `<item>`, and `<footer>` tags.
-
-*   `<header>...</header>`: Template for the beginning of each new group. You can use placeholders here, including `{ColumnName}` (for the value being grouped by) and `{group.count}`.
-*   `<item>...</item>`: Template for each individual row within a group.
-*   `<footer>...</footer>`: Template for the end of each group.
+When using `groupBy`, the template sections are rendered in this order:
+1.  `head` (once)
+2.  For each group:
+    1.  `groupHead`
+    2.  `body` (for each item in the group)
+    3.  `groupFoot`
+3.  `foot` (once)
 
 **Example: Email (HTML) with Grouping**
-This template groups alerts by `ServerName` and puts them in a table.
+This template groups alerts by `ServerName` and formats the output as an HTML table.
 
-```xml
-<head><h1>Server Issues Report ({global.count} total)</h1></head>
-<group by="ServerName">
-  <header>
-    <h2>Server: {ServerName} ({group.count} issues)</h2>
-    <table border="1">
-      <thead><tr><th>Error</th><th>Time</th></tr></thead>
-      <tbody>
-  </header>
-  <item>
-    <tr><td>{ErrorMessage}</td><td>{Timestamp}</td></tr>
-  </item>
-  <footer>
-      </tbody>
-    </table>
-  </footer>
-</group>
-<footer><hr/><p>Report Generated by MonitorApp.</p></footer>
+```json
+"notificationBody": {
+  "head": "<h1>Server Issues Report ({global.count} total)</h1>",
+  "groupBy": "ServerName",
+  "groupHead": "<h2>Server: {ServerName} ({group.count} issues)</h2><table border='1'><thead><tr><th>Error</th><th>Time</th></tr></thead><tbody>",
+  "body": "<tr><td>{ErrorMessage}</td><td>{Timestamp}</td></tr>",
+  "groupFoot": "</tbody></table>",
+  "foot": "<hr/><p>Report Generated by MonitorApp.</p>"
+}
 ```
 
 **Example: Teams (Markdown) with Grouping**
-This template groups alerts by `Severity`, using Markdown formatting.
+This template groups alerts by `Severity`, using Markdown formatting for a Teams message.
 
-```xml
-<head># Critical Alerts Summary ({global.count} total)</head>
-<group by="Severity">
-  <header>## Severity: {Severity} ({group.count} alerts)</header>
-  <item>- **Alert ID**: {AlertID} | Message: {Message}</item>
-  <footer>---</footer>
-</group>
-<footer>End of Alerts.</footer>
+```json
+"notificationBody": {
+  "head": "# Critical Alerts Summary ({global.count} total)",
+  "groupBy": "Severity",
+  "groupHead": "## Severity: {Severity} ({group.count} alerts)",
+  "body": "- **Alert ID**: {AlertID} | Message: {Message}",
+  "groupFoot": "---",
+  "foot": "End of Alerts."
+}
 ```
 ___
 ## Developer Notes
