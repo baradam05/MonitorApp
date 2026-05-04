@@ -8,7 +8,7 @@ namespace MonitorApp.JsonParsing;
 /// <summary>
 /// Loads and parses the application's configuration from JSON files.
 /// </summary>
-public static class JsonParser
+public static class ConfigParser
 {
     private static string filePath = Path.Combine(AppContext.BaseDirectory, "_Config", "config.json");
     private static Config? config = null;

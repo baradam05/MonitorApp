@@ -23,7 +23,7 @@ public class App
     /// </summary>
     public async Task Run(string singleQueryName = "")
     {
-        config = JsonParser.Load();
+        config = ConfigParser.Load();
         if (config == null || config.QueriesObjects == null || config.QueriesObjects.Count == 0)
             return;
 
@@ -98,7 +98,7 @@ public class App
 
                 try
                 {
-                    Console.WriteLine($"DEBUG: Query '{q.name}' is sending notification '{notification.name}' (Type: {notification.GetType().Name.Replace("NotificationDto", "")}).");
+                    Console.WriteLine($"Query '{q.name}' is sending notification '{notification.name}' (Type: {notification.GetType().Name.Replace("NotificationDto", "")}).");
                     await n.Notify(finalMessage);
                 }
                 catch (Exception e)

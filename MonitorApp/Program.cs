@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using MonitorApp.UI;
 
 namespace MonitorApp;
 
@@ -113,12 +114,18 @@ class Program
 
         #endregion
         
-
-        string? command = args.Length != 0 ? args[0] : null;
-        App app = new App();
+        UIMenu menu = UI.UI.CreateMainMenu();
+        string? command = menu.Run();
         
-        //If no command is provided, run the app normally.
-        if (command == null)
+        App app = new App();
+
+        if (command == null || command == "EXIT")
+        {
+            Console.WriteLine("Exiting application.");
+            return;
+        }
+
+        if (command == "RUN_ALL")
         {
             try
             {
@@ -131,10 +138,12 @@ class Program
                 Console.WriteLine(e);
                 Console.WriteLine("--- END ERROR DETAILS ---");
             }
+
+            Console.WriteLine("\nAll queries have been processed. Press any key to exit.");
+            Console.ReadKey();
             return;
         }
 
-        //Argument to test certain query
         Match m = Regex.Match(command, @"^/test:(?:""([^""]+)""|(.+))$", RegexOptions.IgnoreCase);
         if (m.Success)
         {

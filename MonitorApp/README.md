@@ -1,5 +1,22 @@
 # MonitorApp
 
+## Interactive UI
+
+When launched without command-line arguments, MonitorApp starts in an interactive UI mode. This provides a text-based menu for easier management and execution of monitoring tasks.
+
+Use **↑** and **↓** arrow keys to navigate the menu, and **Enter** to select an option. Press **Esc** to exit the application.
+
+### Menu Options
+
+-   **Show Connections**: Displays a list of all data source connections (`SQL` and `Elasticsearch`) defined in `config.json`.
+-   **Show Queries**: Shows a detailed view of all configured queries. For each query, it lists its target connection, query text, and the configured notifications (SMS, Email, Teams).
+-   **Edit config.json**: Opens the `_Config/config.json` file in your system's default text editor.
+-   **Test Query**: Prompts you to enter the name of a single query to execute it immediately. This is useful for debugging a specific query.
+-   **Run All Queries**: Triggers an execution of all queries defined in the configuration.
+-   **Exit**: Closes the application.
+
+___
+
 MonitorApp is a .NET console application for monitoring data sources like MSSQL and Elasticsearch. It executes user-defined queries and uses templated notifications through various channels, including Email, Microsoft Teams, and SMS, **when query results are found**.
 
 An example of a complete configuration file can be found in `MockFiles/`.
@@ -11,13 +28,13 @@ On its first run, MonitorApp looks for a configuration file at `_Config/config.j
 
 ### Running the Application
 
-*   **Standard Run:** To execute all queries defined in `config.json`:
+-   **Standard Run:** To execute all queries defined in `config.json`:
 ```bash
 dotnet run
 ```
 Alternatively, build the project and run the executable.
 
-*   **Test a Specific Query:** To run a single named query for testing or debugging:
+-   **Test a Specific Query:** To run a single named query for testing or debugging:
 ```bash
 dotnet run /test:"YourQueryName"
 ```
@@ -51,9 +68,9 @@ This array defines the connection details for your data sources.
   "connectionString": "Server=YOUR_SERVER;Database=YOUR_DB;User Id=YOUR_USER;Password=YOUR_PASSWORD;TrustServerCertificate=True;"
 }
 ```
-*   `"type"`: **(Required)** Must be `"sql"`.
-*   `"name"`: **(Required)** A unique name to identify this connection. This is referenced by your queries.
-*   `"connectionString"`: **(Required)** The standard connection string for your MSSQL database.
+-   `"type"`: **(Required)** Must be `"sql"`.
+-   `"name"`: **(Required)** A unique name to identify this connection. This is referenced by your queries.
+-   `"connectionString"`: **(Required)** The standard connection string for your MSSQL database.
 
 #### Elasticsearch Connection (`"type": "elastic"`)
 ```json
@@ -65,11 +82,11 @@ This array defines the connection details for your data sources.
   "password": "changeme"
 }
 ```
-*   `"type"`: **(Required)** Must be `"elastic"`.
-*   `"name"`: **(Required)** A unique name for this connection.
-*   `"uri"`: **(Required)** The URI of your Elasticsearch instance.
-*   `"username"`: (Optional) Username for basic authentication.
-*   `"password"`: (Optional) Password for basic authentication.
+-   `"type"`: **(Required)** Must be `"elastic"`.
+-   `"name"`: **(Required)** A unique name for this connection.
+-   `"uri"`: **(Required)** The URI of your Elasticsearch instance.
+-   `"username"`: (Optional) Username for basic authentication.
+-   `"password"`: (Optional) Password for basic authentication.
 
 ___
 ### Queries
@@ -83,20 +100,20 @@ These queries are defined directly within `config.json` or an `inFile` reference
   "type": "sql", // or "elastic"
   "name": "MonitorCriticalErrors",
   "connection": "MyDatabaseConnection", // Name of a defined connection
-  "queryText": "SELECT * FROM ErrorLogs WHERE Severity = 'Critical'",
+  "queryText": "SELECT - FROM ErrorLogs WHERE Severity = 'Critical'",
   "notifications": [
     // Array of notification definitions
   ]
 }
 ```
-*   `"type"`: **(Required)** Must be `"sql"` or `"elastic"`.
-*   `"name"`: **(Required)** A unique name for the query. Essential for testing via the `/test` argument.
-*   `"connection"`: **(Required)** The `name` of a connection defined in the `Connections` section.
-*   `"queryText"`: **(Required)** The query to execute. For SQL, this is a standard SQL statement. For Elasticsearch, this can be an Elasticsearch SQL query or a JSON DSL query.
-*   `"notifications"`: **(Required)** An array of one or more notification objects to be triggered if the query returns results.
+-   `"type"`: **(Required)** Must be `"sql"` or `"elastic"`.
+-   `"name"`: **(Required)** A unique name for the query. Essential for testing via the `/test` argument.
+-   `"connection"`: **(Required)** The `name` of a connection defined in the `Connections` section.
+-   `"queryText"`: **(Required)** The query to execute. For SQL, this is a standard SQL statement. For Elasticsearch, this can be an Elasticsearch SQL query or a JSON DSL query.
+-   `"notifications"`: **(Required)** An array of one or more notification objects to be triggered if the query returns results.
 ##### Elasticsearch only
-*   `"queryLang"`: (Optional) Specify `"sql"` if `queryText` contains an Elasticsearch SQL query. If omitted, `queryText` is treated as JSON DSL.
-*   `"index"`: (Required for JSON DSL, optional for ES-SQL) The default index to run the query against. If `queryLang` is not `"sql"`, this field is mandatory.
+-   `"queryLang"`: (Optional) Specify `"sql"` if `queryText` contains an Elasticsearch SQL query. If omitted, `queryText` is treated as JSON DSL.
+-   `"index"`: (Required for JSON DSL, optional for ES-SQL) The default index to run the query against. If `queryLang` is not `"sql"`, this field is mandatory.
 
 #### Query from File (`"type": "inFile"`)
 For better organization, you can load queries from an external JSON file.
@@ -108,12 +125,12 @@ For better organization, you can load queries from an external JSON file.
   "path": "AdditionalQueries.json" // Path relative to the _Config directory
 }
 ```
-*   `"type"`: **(Required)** Must be `"inFile"`.
-*   `"name"`: **(Required)** A unique name for this `inFile` entry.
-*   `"path"`: **(Required)** The filename of the JSON file containing more queries. 
-	* This file **must be located in the `_Config` directory**.
-	* Its content should be a JSON array of query objects. 
-		* An example is provided in `MockInFile.json`.
+-   `"type"`: **(Required)** Must be `"inFile"`.
+-   `"name"`: **(Required)** A unique name for this `inFile` entry.
+-   `"path"`: **(Required)** The filename of the JSON file containing more queries. 
+	- This file **must be located in the `_Config` directory**.
+	- Its content should be a JSON array of query objects. 
+		- An example is provided in `MockInFile.json`.
 
 ___
 ### Notifications
@@ -130,7 +147,7 @@ The `notificationBody` object is a flexible container for your message template.
   "foot": "Optional footer",
 }
 ```
-* For simple messages, you only need to provide the `body` field.
+- For simple messages, you only need to provide the `body` field.
 - You can group your query - for more below
 #### Email Notification (`"type": "email"`)
 ```json
@@ -150,8 +167,8 @@ The `notificationBody` object is a flexible container for your message template.
   }
 }
 ```
-* The `subject` can also contain placeholders, which will be populated from the first row of data.
-* For body use html elements
+- The `subject` can also contain placeholders, which will be populated from the first row of data.
+- For body use html elements
 #### SMS Notification (`"type": "sms"`)
 ```json
 {
@@ -167,7 +184,7 @@ The `notificationBody` object is a flexible container for your message template.
   }
 }
 ```
-*   For SMS only use "body" as it doesn't support html nor markdown formatting
+-   For SMS only use "body" as it doesn't support html nor markdown formatting
 
 #### Teams Notification (`"type": "teams"`)
 ```json
@@ -181,9 +198,9 @@ The `notificationBody` object is a flexible container for your message template.
   }
 }
 ```
-* Content is treated as Markdown. 
-* The message builder automatically handles newlines between sections, but you can include your own (`\n`) for finer control.
-* Headers are limited to `# ` and `## `
+- Content is treated as Markdown. 
+- The message builder automatically handles newlines between sections, but you can include your own (`\n`) for finer control.
+- Headers are limited to `# ` and `## `
 
 ___
 ## Advanced Notification Formatting
@@ -205,13 +222,13 @@ If your query returns rows with an `ErrorMessage` column, you can use:
 Special placeholders provide metadata about the query results.
 
 - **Global placeholders** - can be used in `head`, `body`, `foot`, `groupHead`, `groupFoot` and in `Subject` if email.
-	* `{global.count}`: **total number of rows** returned by the query.
-	* `{global.time}`: **current time**. (*HH:mm:ss*)
-	* `{global.date}`: **current date**. (*yyyy-MM-dd*)
-	* `{global.datetime}`: **current date and time**. (*yyyy-MM-dd HH:mm:ss*)
+	- `{global.count}`: **total number of rows** returned by the query.
+	- `{global.time}`: **current time**. (*HH:mm:ss*)
+	- `{global.date}`: **current date**. (*yyyy-MM-dd*)
+	- `{global.datetime}`: **current date and time**. (*yyyy-MM-dd HH:mm:ss*)
 	
-* **Group placeholders** - Only available when using `groupBy`. Can be used in `groupHead`, `body` and `groupFoot`
-	* `{group.count}`: It returns the **number of items within the current group**.
+- **Group placeholders** - Only available when using `groupBy`. Can be used in `groupHead`, `body` and `groupFoot`
+	- `{group.count}`: It returns the **number of items within the current group**.
 
 **Example (using `global.count`):**
 ```json
@@ -275,7 +292,7 @@ This template groups alerts by `Severity`, using Markdown formatting for a Teams
 ```
 ___
 ## Developer Notes
-*   **Technology**: Built with C# and .NET 8.0.
-*   **Configuration Parsing**: Uses `System.Text.Json` with `JsonPolymorphic` attributes to handle different DTO types for connections, queries, and notifications.
-*   **Extensibility**: Designed with interfaces like `IConnectionService` and `INotificationService` to allow for future expansion to other data sources and notification channels.
-*   **Message Generation**: The `MessageBuilder` class, along with the `IMessageRenderer` pattern (`HtmlMessageRenderer`, `MarkdownMessageRenderer`), handles the transformation of data and templates into final message content.
+-   **Technology**: Built with C# and .NET 8.0.
+-   **Configuration Parsing**: Uses `System.Text.Json` with `JsonPolymorphic` attributes to handle different DTO types for connections, queries, and notifications.
+-   **Extensibility**: Designed with interfaces like `IConnectionService` and `INotificationService` to allow for future expansion to other data sources and notification channels.
+-   **Message Generation**: The `MessageBuilder` class, along with the `IMessageRenderer` pattern (`HtmlMessageRenderer`, `MarkdownMessageRenderer`), handles the transformation of data and templates into final message content.
